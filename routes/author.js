@@ -86,12 +86,7 @@ router.post("/author/login", async (req, res) => {
 
 // Récupérer les informations d'un auteur
 router.get("/author", isAuthenticated, async (req, res) => {
-  try {
-    const author = await Author.findById(authorFound._id);
-    return res.status(200).json(author);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  return res.status(200).json(req.authorFound);
 });
 
 // Mettre à jour son mot de passe (post)
