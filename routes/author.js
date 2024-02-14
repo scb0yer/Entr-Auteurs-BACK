@@ -97,6 +97,7 @@ router.get("/author", isAuthenticated, async (req, res) => {
 // Mettre à jour son mot de passe (post)
 router.post("/author/password", isAuthenticated, async (req, res) => {
   try {
+    const authorFound = req.authorFound;
     const password = req.body.password;
     const salt = uid2(24);
     const token = uid2(18);
@@ -119,6 +120,7 @@ router.post("/author/password", isAuthenticated, async (req, res) => {
 // Mettre à jour son histoire (post) - uniquement si le statut est inactive
 router.post("/author/updateStory", isAuthenticated, async (req, res) => {
   try {
+    const authorFound = req.authorFound;
     const author = await Author.findOne({ email: authorFound.email });
     if (author.status !== "Inactive") {
       return res.status(400).json({
