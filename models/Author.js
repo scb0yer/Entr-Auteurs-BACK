@@ -18,16 +18,7 @@ const Author = mongoose.model("Author", {
   stories_assigned: [
     {
       week: String,
-      stories: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Author",
-        },
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Author",
-        },
-      ],
+      stories: Array,
     },
   ],
   stories_voted: [

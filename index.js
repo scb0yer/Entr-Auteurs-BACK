@@ -10,9 +10,11 @@ mongoose.connect(process.env.MONGODB_URL + "Entr'Auteurs");
 
 const authorRoutes = require("./routes/author");
 const mailRoutes = require("./routes/mail");
+const sessionRoutes = require("./routes/session");
 
 app.use(authorRoutes);
 app.use(mailRoutes);
+app.use(sessionRoutes);
 
 app.get("/", (req, res) => {
   try {

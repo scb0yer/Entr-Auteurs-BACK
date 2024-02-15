@@ -2,7 +2,10 @@ const express = require("express");
 const router = express.Router();
 
 const Author = require("../models/Author");
+const Session = require("../models/Session");
 const isAuthenticated = require("../middlewares/isAuthenticated");
+const isAdmin = require("../middlewares/isAdmin");
+const newTirage = require("../functions/newTirage");
 
 const uid2 = require("uid2");
 const encBase64 = require("crypto-js/enc-base64");
@@ -161,12 +164,103 @@ router.get("/authors", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-// Récupérer un auteur (get)
+
+// Récupérer les auteurs selon leur statut
+router.get("/admin/authors/:status", isAdmin, async (req, res) => {
+  try {
+    const filter = {};
+    filter.status = req.params.status;
+    const authors = await Author.find(filter);
+    const count = await Author.countDocuments(filter);
+    return res.status(200).json({ count: count, authors: authors });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 // Modifier le statut d'un auteur (post) - uniquement pour admin
+router.post("/admin/changeStatus/:id", isAdmin, async (req, res) => {
+  try {
+    const author = await Author.findByIdAndUpdate(
+      req.params.id,
+      {
+        status: req.body.status,
+      },
+      { new: true }
+    );
+    await author.save();
+    res
+      .status(200)
+      .json(
+        `Nouveau statut ${author.status} enregistré pour ${author.account.username}`
+      );
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
-// Modifier le statut de tous les auteurs (active -> inactive) ou (registered -> active) /// (à la fin et au début d'une session) - uniquement pour admin
+// Lancer une session : Attribuer les stories_assigned à chaque auteur dont le statut est registered et passer leur statut en active
+router.post("/admin/newSession/", isAdmin, async (req, res) => {
+  try {
+    const sessions = await Session.find();
+    const ongoing = await Session.findOne({ status: "ongoing" });
+    if (ongoing !== null) {
+      return res
+        .status(400)
+        .json({ message: "Une session est déjà en cours 🙀" });
+    }
+    const filter = {};
+    let result = "";
+    filter.status = "Registered";
+    const authors = await Author.find(filter);
+    const authorsId = [];
+    for (let i = 0; i < authors.length; i++) {
+      authorsId.push(authors[i]._id);
+    }
+    for (i = 0; ; i++) {
+      if (newTirage(authorsId)) {
+        result = newTirage(authorsId);
+        console.log(result.tirage.length);
+        // Pour chaque auteur :
+        for (let a = 0; a < authors.length; a++) {
+          const stories_assigned = [];
 
-// Attribuer les stories_assigned à chaque auteur dont le statut est registered
+          for (let w = 0; w < result.tirage[0].length; w++) {
+            stories_assigned.push({
+              week: w + 1,
+              stories: [
+                result.tirage[a][w].slice(0, 23),
+                result.tirage[a][w].slice(23),
+              ],
+            });
+          }
+          const author = await Author.findByIdAndUpdate(
+            authors[a],
+            {
+              status: "Active",
+              stories_assigned: stories_assigned,
+            },
+            { new: true }
+          );
+          await author.save();
+        }
+        filter.status = "Active";
+        const activeAuthors = await Author.find(filter);
+        const index = sessions.length + 1;
+        const newSession = new Session({
+          status: "ongoing",
+          index: index,
+        });
+        await newSession.save();
+        res.status(200).json(activeAuthors);
+        break;
+      } else {
+        console.log(`essai${i}`);
+      }
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 module.exports = router;
