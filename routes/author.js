@@ -339,8 +339,8 @@ router.post("/admin/newSession/", isAdmin, async (req, res) => {
             stories_assigned.push({
               week: w + 1,
               stories: [
-                result.tirage[a][w].slice(0, 23),
-                result.tirage[a][w].slice(23),
+                result.tirage[a][w].slice(0, 24),
+                result.tirage[a][w].slice(24),
               ],
             });
           }
