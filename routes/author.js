@@ -87,9 +87,15 @@ router.post("/author/login", async (req, res) => {
   }
 });
 
-// Récupérer les informations d'un auteur
+// Récupérer les informations d'un auteur et la semaine en cours de la session en cours
 router.get("/author", isAuthenticated, async (req, res) => {
-  return res.status(200).json(req.authorFound);
+  try {
+    const session = await Session.findOne({ status: "ongoing" });
+    const week = session.weeks.length;
+    return res.status(200).json({ week: week, author: req.authorFound });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
 // Mettre à jour son mot de passe (post)
@@ -109,7 +115,7 @@ router.post("/author/password", isAuthenticated, async (req, res) => {
       { new: true }
     );
     await passwordToUpdate.save();
-    res.status(200).json("Nouveau mot de passe enregistré 👍");
+    res.status(200).json(passwordToUpdate);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -150,12 +156,108 @@ router.post("/author/updateStory", isAuthenticated, async (req, res) => {
   }
 });
 
-// Voter (post) - doit prendre en compte la semaine en params
+// Lancer une nouvelle semaine
+router.post("/admin/week", isAdmin, async (req, res) => {
+  try {
+    const session = await Session.findOne({ status: "ongoing" });
+    const weeks = [...session.weeks];
+    const week = session.weeks.length + 1;
+    weeks.push(week);
+    const updatedSession = await Session.findOneAndUpdate(
+      { status: "ongoing" },
+      {
+        weeks: weeks,
+      },
+      { new: true }
+    );
+    return res.status(200).json(updatedSession);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Voter (post) - doit prendre en compte la semaine et l'histoire en params
+router.post("/author/:storyId/:week", isAuthenticated, async (req, res) => {
+  try {
+    if (req.authorFound.stories_voted.length >= req.params.week) {
+      return res
+        .status(400)
+        .json({ message: "Tu as déjà voté cette semaine ! 🙀" });
+    }
+    const index = req.params.week - 1;
+    const story1Id = req.authorFound.stories_assigned[index].stories[0];
+    const story2Id = req.authorFound.stories_assigned[index].stories[1];
+    const author1 = await Author.findById(story1Id);
+    const score1 = [...author1.scores];
+    if (story1Id === req.params.storyId) {
+      score1.push({ week: req.params.week, score: 1 });
+    } else {
+      score1.push({ week: req.params.week, score: 0 });
+    }
+    const updatedAuthor1 = await Author.findByIdAndUpdate(
+      story1Id,
+      {
+        scores: score1,
+      },
+      { new: true }
+    );
+    const author2 = await Author.findById(story2Id);
+    const score2 = [...author2.scores];
+    if (story2Id === req.params.storyId) {
+      score2.push({ week: req.params.week, score: 1 });
+    } else {
+      score2.push({ week: req.params.week, score: 0 });
+    }
+    const updatedAuthor2 = await Author.findByIdAndUpdate(
+      story2Id,
+      {
+        scores: score2,
+      },
+      { new: true }
+    );
+    const stories_voted = [...req.authorFound.stories_voted];
+    stories_voted.push({ week: req.params.week, story: req.params.storyId });
+    const author = await Author.findByIdAndUpdate(
+      req.authorFound._id,
+      {
+        stories_voted: stories_voted,
+      },
+      { new: true }
+    );
+    return res.status(200).json(author);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Supprimer son compte (delete)
+router.delete("/author/delete", isAuthenticated, async (req, res) => {
+  try {
+    if (
+      req.authorFound.status === "Active" ||
+      req.authorFound.status === "Registered" ||
+      req.authorFound.status === "BlackList"
+    ) {
+      throw {
+        status: 404,
+        message: "Le statut ne permet pas de supprimer le compte",
+      };
+    }
+    const result = await Author.findByIdAndDelete(req.authorFound._id);
+    if (!result) {
+      throw { status: 404, message: "Pas d'auteur trouvé" };
+    }
+    res.json({ message: "Auteur supprimé" });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(error.status || 500)
+      .json({ message: error.message || "Internal Server Error" });
+  }
+});
 
 // Récupérer tous les auteurs (get)
-router.get("/authors", async (req, res) => {
+router.get("/admin/authors", isAdmin, async (req, res) => {
   try {
     const authors = await Author.find();
     const count = await Author.countDocuments();
@@ -213,6 +315,8 @@ router.post("/admin/newSession/", isAdmin, async (req, res) => {
     let result = "";
     filter.status = "Registered";
     const authors = await Author.find(filter);
+    const nbAuthors = await Author.countDocuments(filter);
+    const length = (nbAuthors ** 2 - nbAuthors) / 2 / nbAuthors;
     const authorsId = [];
     for (let i = 0; i < authors.length; i++) {
       authorsId.push(authors[i]._id);
@@ -221,7 +325,6 @@ router.post("/admin/newSession/", isAdmin, async (req, res) => {
       if (newTirage(authorsId)) {
         result = newTirage(authorsId);
         console.log(result.tirage.length);
-        // Pour chaque auteur :
         for (let a = 0; a < authors.length; a++) {
           const stories_assigned = [];
 
@@ -250,6 +353,8 @@ router.post("/admin/newSession/", isAdmin, async (req, res) => {
         const newSession = new Session({
           status: "ongoing",
           index: index,
+          length: length,
+          weeks: [1],
         });
         await newSession.save();
         res.status(200).json(activeAuthors);
