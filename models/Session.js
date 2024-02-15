@@ -7,11 +7,12 @@ const Session = mongoose.model("Session", {
   weeks: Array,
   results: [
     {
-      rang: Number,
+      rank: Number,
       author: String,
       story_title: String,
       story_url: String,
       story_cover: String,
+      score: Number,
     },
   ],
 });

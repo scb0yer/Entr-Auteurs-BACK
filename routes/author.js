@@ -90,8 +90,11 @@ router.post("/author/login", async (req, res) => {
 // Récupérer les informations d'un auteur et la semaine en cours de la session en cours
 router.get("/author", isAuthenticated, async (req, res) => {
   try {
+    let week = 0;
     const session = await Session.findOne({ status: "ongoing" });
-    const week = session.weeks.length;
+    if (session) {
+      week = session.weeks.length;
+    }
     return res.status(200).json({ week: week, author: req.authorFound });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -177,58 +180,62 @@ router.post("/admin/week", isAdmin, async (req, res) => {
 });
 
 // Voter (post) - doit prendre en compte la semaine et l'histoire en params
-router.post("/author/:storyId/:week", isAuthenticated, async (req, res) => {
-  try {
-    if (req.authorFound.stories_voted.length >= req.params.week) {
-      return res
-        .status(400)
-        .json({ message: "Tu as déjà voté cette semaine ! 🙀" });
+router.post(
+  "/author/vote/:storyId/:week",
+  isAuthenticated,
+  async (req, res) => {
+    try {
+      if (req.authorFound.stories_voted.length >= req.params.week) {
+        return res
+          .status(400)
+          .json({ message: "Tu as déjà voté cette semaine ! 🙀" });
+      }
+      const index = req.params.week - 1;
+      const story1Id = req.authorFound.stories_assigned[index].stories[0];
+      const story2Id = req.authorFound.stories_assigned[index].stories[1];
+      const author1 = await Author.findById(story1Id);
+      const score1 = [...author1.scores];
+      if (story1Id === req.params.storyId) {
+        score1.push({ week: req.params.week, score: 1 });
+      } else {
+        score1.push({ week: req.params.week, score: 0 });
+      }
+      const updatedAuthor1 = await Author.findByIdAndUpdate(
+        story1Id,
+        {
+          scores: score1,
+        },
+        { new: true }
+      );
+      const author2 = await Author.findById(story2Id);
+      const score2 = [...author2.scores];
+      if (story2Id === req.params.storyId) {
+        score2.push({ week: req.params.week, score: 1 });
+      } else {
+        score2.push({ week: req.params.week, score: 0 });
+      }
+      const updatedAuthor2 = await Author.findByIdAndUpdate(
+        story2Id,
+        {
+          scores: score2,
+        },
+        { new: true }
+      );
+      const stories_voted = [...req.authorFound.stories_voted];
+      stories_voted.push({ week: req.params.week, story: req.params.storyId });
+      const author = await Author.findByIdAndUpdate(
+        req.authorFound._id,
+        {
+          stories_voted: stories_voted,
+        },
+        { new: true }
+      );
+      return res.status(200).json(author);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
-    const index = req.params.week - 1;
-    const story1Id = req.authorFound.stories_assigned[index].stories[0];
-    const story2Id = req.authorFound.stories_assigned[index].stories[1];
-    const author1 = await Author.findById(story1Id);
-    const score1 = [...author1.scores];
-    if (story1Id === req.params.storyId) {
-      score1.push({ week: req.params.week, score: 1 });
-    } else {
-      score1.push({ week: req.params.week, score: 0 });
-    }
-    const updatedAuthor1 = await Author.findByIdAndUpdate(
-      story1Id,
-      {
-        scores: score1,
-      },
-      { new: true }
-    );
-    const author2 = await Author.findById(story2Id);
-    const score2 = [...author2.scores];
-    if (story2Id === req.params.storyId) {
-      score2.push({ week: req.params.week, score: 1 });
-    } else {
-      score2.push({ week: req.params.week, score: 0 });
-    }
-    const updatedAuthor2 = await Author.findByIdAndUpdate(
-      story2Id,
-      {
-        scores: score2,
-      },
-      { new: true }
-    );
-    const stories_voted = [...req.authorFound.stories_voted];
-    stories_voted.push({ week: req.params.week, story: req.params.storyId });
-    const author = await Author.findByIdAndUpdate(
-      req.authorFound._id,
-      {
-        stories_voted: stories_voted,
-      },
-      { new: true }
-    );
-    return res.status(200).json(author);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
   }
-});
+);
 
 // Supprimer son compte (delete)
 router.delete("/author/delete", isAuthenticated, async (req, res) => {
@@ -338,7 +345,7 @@ router.post("/admin/newSession/", isAdmin, async (req, res) => {
             });
           }
           const author = await Author.findByIdAndUpdate(
-            authors[a],
+            authors[a]._id,
             {
               status: "Active",
               stories_assigned: stories_assigned,
