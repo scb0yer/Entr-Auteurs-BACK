@@ -313,20 +313,39 @@ router.delete("/author/delete", isAuthenticated, async (req, res) => {
   }
 });
 
-// 7. Récupérer les story_details d'une histoire en fonction de son id (get)
-router.get("/author/:storyId", isAuthenticated, async (req, res) => {
-  try {
-    const story = {};
-    const author = await Author.findById(req.params.storyId);
-    story.id = req.params.storyId;
-    story.url = author.story_details.story_url;
-    story.title = author.story_details.story_title;
-    story.cover = author.story_details.story_cover;
-    return res.status(200).json(story);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+// 7. Récupérer les story_details des stories_assigned d'un auteur (get)
+router.get(
+  "/author/storiesAssigned/:week",
+  isAuthenticated,
+  async (req, res) => {
+    try {
+      const stories = [];
+      const story1 = await Author.findById(
+        req.authorFound.stories_assigned[req.params.week - 1].stories[0]
+      );
+      stories.push({
+        story_id:
+          req.authorFound.stories_assigned[req.params.week - 1].stories[0],
+        story_url: story1.story_details.story_url,
+        story_title: story1.story_details.story_title,
+        story_cover: story1.story_details.story_cover,
+      });
+      const story2 = await Author.findById(
+        req.authorFound.stories_assigned[req.params.week - 1].stories[1]
+      );
+      stories.push({
+        story_id:
+          req.authorFound.stories_assigned[req.params.week - 1].stories[1],
+        story_url: story2.story_details.story_url,
+        story_title: story2.story_details.story_title,
+        story_cover: story2.story_details.story_cover,
+      });
+      return res.status(200).json(stories);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
   }
-});
+);
 
 // --------------------------- Routes pour les Admins ---------------------------
 
