@@ -51,6 +51,23 @@ router.post("/admin/week", isAdmin, async (req, res) => {
     const weeks = [...session.weeks];
     const week = weeks.length + 1;
     weeks.push(week);
+    const filter = {};
+    filter.status = "Active";
+    const authors = await Author.find(filter);
+    for (let a = 0; a < authors.length; a++) {
+      if (authors[a].stories_voted.length < weeks.length) {
+        const stories_voted = [...authors[a].stories_voted];
+        stories_voted.push({ week: weeks.length, story: "penalty" });
+        const author = await Author.findByIdAndUpdate(
+          authors[a]._id,
+          {
+            stories_voted: stories_voted,
+          },
+          { new: true }
+        );
+        await author.save();
+      }
+    }
     const updatedSession = await Session.findOneAndUpdate(
       { status: "ongoing" },
       {
@@ -84,15 +101,21 @@ router.post("/admin/endSession", isAdmin, async (req, res) => {
       for (let s = 0; s < authors[a].scores.length; s++) {
         score += authors[a].scores[s].score;
       }
+      let penalties = 0;
+      for (let w = 0; w < authors[a].stories_voted.length; w++) {
+        if (authors[a].stories_voted[w].story === "penalty") {
+          penalties += 2;
+        }
+      }
       results.push({
         author: authors[a].account.username,
         story_title: authors[a].story_details.story_title,
         story_url: authors[a].story_details.story_url,
         story_cover: authors[a].story_details.story_cover,
-        score: score,
+        score: score - penalties,
       });
     }
-    for (let s = count - 1; s >= 0; s--) {
+    for (let s = count - 1; s >= -(count * 2); s--) {
       for (let a = 0; a < results.length; a++) {
         if (results[a].score === s) {
           ranking.push({
