@@ -16,17 +16,15 @@ const SHA256 = require("crypto-js/sha256");
 // // 2. Créer un nouvel auteur (post)
 // Routes pour les auteurs :
 // // 1. Se connecter (post)
-// // 2. Récupérer les informations d'un auteur et le numéro de la semaine (de la session en cours) (get)
+// // 2. Récupérer les informations d'un auteur et le numéro de la semaine (de la session en cours) et ses stories assigned (get)
 // // 3. Mettre à jour son mot de passe (post)
 // // 4. Mettre à jour son histoire (post) et/ou se réinscrire - uniquement si le statut est inactive
 // // 5. Voter (post) uniquement si Active
 // // 6. Supprimer son compte (delete) sauf si statut == Active, Registered ou BlackList
-// // 7. Récupérer les story_details d'une histoire en fonction de son id
 // Routes pour les admins :
 // // 1. Récupérer tous les auteurs (get)
-// // 2. Récupérer les auteurs selon leur statut (get)
-// // 3. Modifier le statut d'un auteur (post)
-// // 4. Lancer une session (post)
+// // 2. Modifier le statut d'un auteur (post)
+// // 3. Lancer une session (post)
 
 // --------------------------- Routes pour les Visiteurs ---------------------------
 
@@ -146,12 +144,36 @@ router.post("/author/login", async (req, res) => {
 // 2. Récupérer les informations d'un auteur et le numéro de la semaine (de la session en cours)
 router.get("/author", isAuthenticated, async (req, res) => {
   try {
+    const author = req.authorFound;
+    const stories = [];
     let week = 0;
     const session = await Session.findOne({ status: "ongoing" });
     if (session) {
       week = session.weeks.length;
     }
-    return res.status(200).json({ week: week, author: req.authorFound });
+    if (author.status === "Active") {
+      const story1 = await Author.findById(
+        author.stories_assigned[session.weeks.length - 1].stories[0]
+      );
+      stories.push({
+        story_id: author.stories_assigned[session.weeks.length - 1].stories[0],
+        story_url: story1.story_details.story_url,
+        story_title: story1.story_details.story_title,
+        story_cover: story1.story_details.story_cover,
+      });
+      const story2 = await Author.findById(
+        author.stories_assigned[session.weeks.length - 1].stories[1]
+      );
+      stories.push({
+        story_id: author.stories_assigned[session.weeks.length - 1].stories[1],
+        story_url: story2.story_details.story_url,
+        story_title: story2.story_details.story_title,
+        story_cover: story2.story_details.story_cover,
+      });
+    }
+    return res
+      .status(200)
+      .json({ week: week, author: req.authorFound, stories: stories });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -313,40 +335,6 @@ router.delete("/author/delete", isAuthenticated, async (req, res) => {
   }
 });
 
-// 7. Récupérer les story_details des stories_assigned d'un auteur (get)
-router.get(
-  "/author/storiesAssigned/:week",
-  isAuthenticated,
-  async (req, res) => {
-    try {
-      const stories = [];
-      const story1 = await Author.findById(
-        req.authorFound.stories_assigned[req.params.week - 1].stories[0]
-      );
-      stories.push({
-        story_id:
-          req.authorFound.stories_assigned[req.params.week - 1].stories[0],
-        story_url: story1.story_details.story_url,
-        story_title: story1.story_details.story_title,
-        story_cover: story1.story_details.story_cover,
-      });
-      const story2 = await Author.findById(
-        req.authorFound.stories_assigned[req.params.week - 1].stories[1]
-      );
-      stories.push({
-        story_id:
-          req.authorFound.stories_assigned[req.params.week - 1].stories[1],
-        story_url: story2.story_details.story_url,
-        story_title: story2.story_details.story_title,
-        story_cover: story2.story_details.story_cover,
-      });
-      return res.status(200).json(stories);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  }
-);
-
 // --------------------------- Routes pour les Admins ---------------------------
 
 // 1. Récupérer tous les auteurs (get)
@@ -363,20 +351,7 @@ router.get("/admin/authors", isAdmin, async (req, res) => {
   }
 });
 
-// 2. Récupérer les auteurs selon leur statut (get)
-router.get("/admin/authors/:status", isAdmin, async (req, res) => {
-  try {
-    const filter = {};
-    filter.status = req.params.status;
-    const authors = await Author.find(filter);
-    const count = await Author.countDocuments(filter);
-    return res.status(200).json({ count: count, authors: authors });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// 3. Modifier le statut d'un auteur (post) - uniquement pour admin
+// 2. Modifier le statut d'un auteur (post) - uniquement pour admin
 router.post("/admin/changeStatus/:id", isAdmin, async (req, res) => {
   try {
     const author = await Author.findByIdAndUpdate(
@@ -397,7 +372,7 @@ router.post("/admin/changeStatus/:id", isAdmin, async (req, res) => {
   }
 });
 
-// 4. Lancer une session : Attribuer les stories_assigned à chaque auteur dont le statut est registered et passer leur statut en active
+// 3. Lancer une session : Attribuer les stories_assigned à chaque auteur dont le statut est registered et passer leur statut en active
 router.post("/admin/newSession/", isAdmin, async (req, res) => {
   try {
     const sessions = await Session.find();
