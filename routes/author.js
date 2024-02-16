@@ -11,7 +11,23 @@ const uid2 = require("uid2");
 const encBase64 = require("crypto-js/enc-base64");
 const SHA256 = require("crypto-js/sha256");
 
-// Créer un nouvel auteur (post)
+// Routes pour les auteurs :
+// // 1. Créer un nouvel auteur (post)
+// // 2. Se connecter (post)
+// // 3. Récupérer les informations d'un auteur et le numéro de la semaine (de la session en cours) (get)
+// // 4. Mettre à jour son mot de passe (post)
+// // 5. Mettre à jour son histoire (post) et/ou se réinscrire - uniquement si le statut est inactive
+// // 6. Voter (post) uniquement si Active
+// // 7. Supprimer son compte (delete) sauf si statut == Active, Registered ou BlackList
+// Routes pour les admins :
+// // 1. Récupérer tous les auteurs (get)
+// // 2. Récupérer les auteurs selon leur statut (get)
+// // 3. Modifier le statut d'un auteur (post)
+// // 4. Lancer une session (post)
+
+// --------------------------- Routes pour les Admins ---------------------------
+
+// 1. Créer un nouvel auteur (post)
 router.post("/author/signup", async (req, res) => {
   try {
     const {
@@ -30,7 +46,20 @@ router.post("/author/signup", async (req, res) => {
         .status(400)
         .json({ message: "Adresse email déjà existante 🙀" });
     }
-
+    const storyAlreadyUsed = await Author.findOne({ story_url });
+    if (storyAlreadyUsed !== null) {
+      return res.status(400).json({ message: "Histoire déjà existante 🙀" });
+    }
+    if (role === "Admin") {
+      return res.status(400).json({
+        message: "Vous ne pouvez pas vous auto-attribuer le rôle d'Admin 🙀",
+      });
+    }
+    if (status !== "Pending") {
+      return res.status(400).json({
+        message: "Le statut doit être `Pending` 🙀",
+      });
+    }
     const salt = uid2(24);
     const token = uid2(18);
     const newAuthor = new Author({
@@ -61,7 +90,7 @@ router.post("/author/signup", async (req, res) => {
   }
 });
 
-//  Se connecter (post)
+// 2. Se connecter (post)
 router.post("/author/login", async (req, res) => {
   try {
     const author = await Author.findOne({ email: req.body.email });
@@ -87,7 +116,7 @@ router.post("/author/login", async (req, res) => {
   }
 });
 
-// Récupérer les informations d'un auteur et la semaine en cours de la session en cours
+// 3. Récupérer les informations d'un auteur et le numéro de la semaine (de la session en cours)
 router.get("/author", isAuthenticated, async (req, res) => {
   try {
     let week = 0;
@@ -101,7 +130,7 @@ router.get("/author", isAuthenticated, async (req, res) => {
   }
 });
 
-// Mettre à jour son mot de passe (post)
+// 4. Mettre à jour son mot de passe (post)
 router.post("/author/password", isAuthenticated, async (req, res) => {
   try {
     const authorFound = req.authorFound;
@@ -124,24 +153,33 @@ router.post("/author/password", isAuthenticated, async (req, res) => {
   }
 });
 
-// Mettre à jour son histoire (post) - uniquement si le statut est inactive
-router.post("/author/updateStory", isAuthenticated, async (req, res) => {
+// 5. Mettre à jour son histoire (post) et/ou se réinscrire - uniquement si le statut est inactive
+router.post("/author/update", isAuthenticated, async (req, res) => {
   try {
     const authorFound = req.authorFound;
-    const author = await Author.findOne({ email: authorFound.email });
-    if (author.status !== "Inactive") {
+    if (authorFound.status !== "Inactive") {
       return res.status(400).json({
         message:
           "Tu ne peux pas modifier ton histoire si ton inscription est en cours de validation ou que tu es inscrit à une session. Tu dois attendre que la session soit terminée. 🙀",
       });
     }
-    const story_title = req.body.story_title;
-    const story_url = req.body.story_url;
-    const story_cover = req.body.story_cover;
+    let story_title = authorFound.story_title;
+    let story_url = authorFound.story_url;
+    let story_cover = authorFound.story_cover;
+    let status = "Inactive";
+    if (req.body.story_title && req.body.story_url && req.body.story_cover) {
+      story_title = req.body.story_title;
+      story_url = req.body.story_url;
+      story_cover = req.body.story_cover;
+    }
+    if (req.body.status) {
+      status = "Pending";
+    }
     const storyToUpdate = await Author.findByIdAndUpdate(
       authorFound._id,
       {
         story_details: { story_title, story_url, story_cover },
+        status: status,
       },
       { new: true }
     );
@@ -159,32 +197,17 @@ router.post("/author/updateStory", isAuthenticated, async (req, res) => {
   }
 });
 
-// Lancer une nouvelle semaine
-router.post("/admin/week", isAdmin, async (req, res) => {
-  try {
-    const session = await Session.findOne({ status: "ongoing" });
-    const weeks = [...session.weeks];
-    const week = session.weeks.length + 1;
-    weeks.push(week);
-    const updatedSession = await Session.findOneAndUpdate(
-      { status: "ongoing" },
-      {
-        weeks: weeks,
-      },
-      { new: true }
-    );
-    return res.status(200).json(updatedSession);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Voter (post) - doit prendre en compte la semaine et l'histoire en params
+// 6. Voter (post) - doit prendre en compte la semaine et l'histoire en params
 router.post(
   "/author/vote/:storyId/:week",
   isAuthenticated,
   async (req, res) => {
     try {
+      if (req.authorFound.status !== "Active") {
+        return res.status(400).json({
+          message: "Tu ne peux pas voter si ton statut n'est pas `Active`. 🙀",
+        });
+      }
       if (req.authorFound.stories_voted.length >= req.params.week) {
         return res
           .status(400)
@@ -237,13 +260,13 @@ router.post(
   }
 );
 
-// Supprimer son compte (delete)
+// 7. Supprimer son compte (delete)
 router.delete("/author/delete", isAuthenticated, async (req, res) => {
   try {
     if (
       req.authorFound.status === "Active" ||
       req.authorFound.status === "Registered" ||
-      req.authorFound.status === "BlackList"
+      req.authorFound.status === "BlackListed"
     ) {
       throw {
         status: 404,
@@ -263,7 +286,9 @@ router.delete("/author/delete", isAuthenticated, async (req, res) => {
   }
 });
 
-// Récupérer tous les auteurs (get)
+// --------------------------- Routes pour les Admins ---------------------------
+
+// 1. Récupérer tous les auteurs (get)
 router.get("/admin/authors", isAdmin, async (req, res) => {
   try {
     const authors = await Author.find();
@@ -274,7 +299,7 @@ router.get("/admin/authors", isAdmin, async (req, res) => {
   }
 });
 
-// Récupérer les auteurs selon leur statut
+// 2. Récupérer les auteurs selon leur statut (get)
 router.get("/admin/authors/:status", isAdmin, async (req, res) => {
   try {
     const filter = {};
@@ -287,7 +312,7 @@ router.get("/admin/authors/:status", isAdmin, async (req, res) => {
   }
 });
 
-// Modifier le statut d'un auteur (post) - uniquement pour admin
+// 3. Modifier le statut d'un auteur (post) - uniquement pour admin
 router.post("/admin/changeStatus/:id", isAdmin, async (req, res) => {
   try {
     const author = await Author.findByIdAndUpdate(
@@ -308,7 +333,7 @@ router.post("/admin/changeStatus/:id", isAdmin, async (req, res) => {
   }
 });
 
-// Lancer une session : Attribuer les stories_assigned à chaque auteur dont le statut est registered et passer leur statut en active
+// 4. Lancer une session : Attribuer les stories_assigned à chaque auteur dont le statut est registered et passer leur statut en active
 router.post("/admin/newSession/", isAdmin, async (req, res) => {
   try {
     const sessions = await Session.find();

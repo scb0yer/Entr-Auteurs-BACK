@@ -19,8 +19,6 @@ router.post("/sendEmail", async (req, res) => {
       subject: req.body.object,
       text: req.body.message,
     };
-
-    // J'envoie un message via mailgun et je stocke dans response ce que me renvoie Mailgun =>
     const response = await client.messages.create(
       process.env.DOMAIN_MAILGUN,
       messageData

@@ -7,7 +7,12 @@ const isAuthenticated = require("../middlewares/isAuthenticated");
 const isAdmin = require("../middlewares/isAdmin");
 const newTirage = require("../functions/newTirage");
 
-// Créer une route pour récupérer les infos des sessions
+// Routes pour les admins :
+// // 1. Récupérer les infos des sessions (get)
+// // 2. Lancer une nouvelle semaine (post)
+// // 3. Enregistrer le classement final et clore une session (post)
+
+// 1. Récupérer les infos des sessions
 router.get("/admin/sessions", isAdmin, async (req, res) => {
   try {
     const sessions = await Session.find();
@@ -18,7 +23,27 @@ router.get("/admin/sessions", isAdmin, async (req, res) => {
   }
 });
 
-// Créer une route pour enregistrer le classement final et clore une session (mettre le statut de tous les auteurs Active en Inactive)
+// 2. Lancer une nouvelle semaine
+router.post("/admin/week", isAdmin, async (req, res) => {
+  try {
+    const session = await Session.findOne({ status: "ongoing" });
+    const weeks = [...session.weeks];
+    const week = weeks.length + 1;
+    weeks.push(week);
+    const updatedSession = await Session.findOneAndUpdate(
+      { status: "ongoing" },
+      {
+        weeks: weeks,
+      },
+      { new: true }
+    );
+    return res.status(200).json(updatedSession);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 3. Enregistrer le classement final et clore une session (mettre le statut de tous les auteurs Active en Inactive)
 router.post("/admin/endSession", isAdmin, async (req, res) => {
   try {
     const session = await Session.findOne({ status: "ongoing" });
@@ -40,9 +65,9 @@ router.post("/admin/endSession", isAdmin, async (req, res) => {
       }
       results.push({
         author: authors[a].account.username,
-        // story_title: authors[a].story_details.story_title,
+        story_title: authors[a].story_details.story_title,
         story_url: authors[a].story_details.story_url,
-        // story_cover: authors[a].story_details.story_cover,
+        story_cover: authors[a].story_details.story_cover,
         score: score,
       });
     }
