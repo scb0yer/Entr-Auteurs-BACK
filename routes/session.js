@@ -49,8 +49,6 @@ router.post("/admin/week", isAdmin, async (req, res) => {
   try {
     const session = await Session.findOne({ status: "ongoing" });
     const weeks = [...session.weeks];
-    const week = weeks.length + 1;
-    weeks.push(week);
     const filter = {};
     filter.status = "Active";
     const authors = await Author.find(filter);
@@ -67,6 +65,10 @@ router.post("/admin/week", isAdmin, async (req, res) => {
         );
         await author.save();
       }
+    }
+    if (weeks.length < session.length) {
+      const week = weeks.length + 1;
+      weeks.push(week);
     }
     const updatedSession = await Session.findOneAndUpdate(
       { status: "ongoing" },
@@ -96,23 +98,26 @@ router.post("/admin/endSession", isAdmin, async (req, res) => {
     const count = await Author.countDocuments(filter);
     const results = [];
     const ranking = [];
+    let score = 0;
+    let penalties = 0;
     for (let a = 0; a < count; a++) {
-      let score = 0;
+      score = 0;
       for (let s = 0; s < authors[a].scores.length; s++) {
         score += authors[a].scores[s].score;
       }
-      let penalties = 0;
+      penalties = 0;
       for (let w = 0; w < authors[a].stories_voted.length; w++) {
         if (authors[a].stories_voted[w].story === "penalty") {
           penalties += 2;
         }
       }
+      const result = score - penalties;
       results.push({
         author: authors[a].account.username,
         story_title: authors[a].story_details.story_title,
         story_url: authors[a].story_details.story_url,
         story_cover: authors[a].story_details.story_cover,
-        score: score - penalties,
+        score: result,
       });
     }
     for (let s = count - 1; s >= -(count * 2); s--) {
@@ -131,19 +136,22 @@ router.post("/admin/endSession", isAdmin, async (req, res) => {
         for (let a = 0; a < results.length; a++) {
           if (results[a].story_url === ranking[r].story) {
             results[a].rank = 1;
+            ranking[r].rank = 1;
           }
         }
       } else {
         if (ranking[r].score === ranking[r - 1].score) {
           for (let a = 0; a < results.length; a++) {
             if (results[a].story_url === ranking[r].story) {
-              results[a].rank = r;
+              results[a].rank = ranking[r - 1].rank;
+              ranking[r].rank = ranking[r - 1].rank;
             }
           }
         } else {
           for (let a = 0; a < results.length; a++) {
             if (results[a].story_url === ranking[r].story) {
               results[a].rank = r + 1;
+              ranking[r].rank = r + 1;
             }
           }
         }
