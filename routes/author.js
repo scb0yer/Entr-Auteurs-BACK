@@ -354,7 +354,10 @@ router.get("/admin/authors", isAdmin, async (req, res) => {
   try {
     const authors = await Author.find();
     const count = await Author.countDocuments();
-    return res.status(200).json({ count: count, authors: authors });
+    const nbRegistered = await Author.countDocuments({ status: "Registered" });
+    return res
+      .status(200)
+      .json({ count: count, nbRegistered: nbRegistered, authors: authors });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
