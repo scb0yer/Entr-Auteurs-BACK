@@ -318,6 +318,7 @@ router.get("/author/:storyId", isAuthenticated, async (req, res) => {
   try {
     const story = {};
     const author = await Author.findById(req.params.storyId);
+    story.id = req.params.storyId;
     story.url = author.story_details.story_url;
     story.title = author.story_details.story_title;
     story.cover = author.story_details.story_cover;
