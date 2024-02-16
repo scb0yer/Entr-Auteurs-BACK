@@ -11,23 +11,47 @@ const uid2 = require("uid2");
 const encBase64 = require("crypto-js/enc-base64");
 const SHA256 = require("crypto-js/sha256");
 
+// Routes pour les visiteurs:
+// // 1. Récupérer les auteurs selon leur statut (get) / seulement Noms et story_details
+// // 2. Créer un nouvel auteur (post)
 // Routes pour les auteurs :
-// // 1. Créer un nouvel auteur (post)
-// // 2. Se connecter (post)
-// // 3. Récupérer les informations d'un auteur et le numéro de la semaine (de la session en cours) (get)
-// // 4. Mettre à jour son mot de passe (post)
-// // 5. Mettre à jour son histoire (post) et/ou se réinscrire - uniquement si le statut est inactive
-// // 6. Voter (post) uniquement si Active
-// // 7. Supprimer son compte (delete) sauf si statut == Active, Registered ou BlackList
+// // 1. Se connecter (post)
+// // 2. Récupérer les informations d'un auteur et le numéro de la semaine (de la session en cours) (get)
+// // 3. Mettre à jour son mot de passe (post)
+// // 4. Mettre à jour son histoire (post) et/ou se réinscrire - uniquement si le statut est inactive
+// // 5. Voter (post) uniquement si Active
+// // 6. Supprimer son compte (delete) sauf si statut == Active, Registered ou BlackList
 // Routes pour les admins :
 // // 1. Récupérer tous les auteurs (get)
 // // 2. Récupérer les auteurs selon leur statut (get)
 // // 3. Modifier le statut d'un auteur (post)
 // // 4. Lancer une session (post)
 
-// --------------------------- Routes pour les Admins ---------------------------
+// --------------------------- Routes pour les Visiteurs ---------------------------
 
-// 1. Créer un nouvel auteur (post)
+// 1. Récupérer tous les auteurs (get)
+router.get("/authors/:status", async (req, res) => {
+  try {
+    const filter = {};
+    filter.status = req.params.status;
+    const authors = await Author.find(filter);
+    const response = [];
+    for (let a = 0; a < authors.length; a++) {
+      response.push({
+        username: authors[a].account.username,
+        story_title: authors[a].story_details.story_title,
+        story_url: authors[a].story_details.story_url,
+        story_cover: authors[a].story_details.story_cover,
+      });
+    }
+    const count = await Author.countDocuments(filter);
+    return res.status(200).json({ count: count, authors: response });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 2. Créer un nouvel auteur (post)
 router.post("/author/signup", async (req, res) => {
   try {
     const {
@@ -90,7 +114,9 @@ router.post("/author/signup", async (req, res) => {
   }
 });
 
-// 2. Se connecter (post)
+// --------------------------- Routes pour les Auteurs ---------------------------
+
+// 1. Se connecter (post)
 router.post("/author/login", async (req, res) => {
   try {
     const author = await Author.findOne({ email: req.body.email });
@@ -116,7 +142,7 @@ router.post("/author/login", async (req, res) => {
   }
 });
 
-// 3. Récupérer les informations d'un auteur et le numéro de la semaine (de la session en cours)
+// 2. Récupérer les informations d'un auteur et le numéro de la semaine (de la session en cours)
 router.get("/author", isAuthenticated, async (req, res) => {
   try {
     let week = 0;
@@ -130,7 +156,7 @@ router.get("/author", isAuthenticated, async (req, res) => {
   }
 });
 
-// 4. Mettre à jour son mot de passe (post)
+// 3. Mettre à jour son mot de passe (post)
 router.post("/author/password", isAuthenticated, async (req, res) => {
   try {
     const authorFound = req.authorFound;
@@ -153,7 +179,7 @@ router.post("/author/password", isAuthenticated, async (req, res) => {
   }
 });
 
-// 5. Mettre à jour son histoire (post) et/ou se réinscrire - uniquement si le statut est inactive
+// 4. Mettre à jour son histoire (post) et/ou se réinscrire - uniquement si le statut est inactive
 router.post("/author/update", isAuthenticated, async (req, res) => {
   try {
     const authorFound = req.authorFound;
@@ -197,7 +223,7 @@ router.post("/author/update", isAuthenticated, async (req, res) => {
   }
 });
 
-// 6. Voter (post) - doit prendre en compte la semaine et l'histoire en params
+// 5. Voter (post) - doit prendre en compte la semaine et l'histoire en params
 router.post(
   "/author/vote/:storyId/:week",
   isAuthenticated,
@@ -260,7 +286,7 @@ router.post(
   }
 );
 
-// 7. Supprimer son compte (delete)
+// 6. Supprimer son compte (delete)
 router.delete("/author/delete", isAuthenticated, async (req, res) => {
   try {
     if (

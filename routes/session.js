@@ -3,15 +3,36 @@ const router = express.Router();
 
 const Session = require("../models/Session");
 const Author = require("../models/Author");
-const isAuthenticated = require("../middlewares/isAuthenticated");
 const isAdmin = require("../middlewares/isAdmin");
-const newTirage = require("../functions/newTirage");
 
+// Routes pour les visiteurs :
+// // 1. Récupérer les résultats d'une session (get)
 // Routes pour les admins :
 // // 1. Récupérer les infos des sessions (get)
 // // 2. Lancer une nouvelle semaine (post)
 // // 3. Enregistrer le classement final et clore une session (post)
 
+// --------------------------- Routes pour les Visiteurs ---------------------------
+// 1. Récupérer les résultats d'une session (get)
+router.get("/session/:index", async (req, res) => {
+  try {
+    const index = req.params.index;
+    const session = await Session.findOne({ index });
+    if (session.status === "ongoing") {
+      throw {
+        status: 404,
+        message:
+          "On ne peut pas récupérer les informations d'une session en cours.",
+      };
+    } else {
+      return res.status(200).json(session);
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --------------------------- Routes pour les Admin ---------------------------
 // 1. Récupérer les infos des sessions
 router.get("/admin/sessions", isAdmin, async (req, res) => {
   try {
