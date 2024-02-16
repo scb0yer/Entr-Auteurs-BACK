@@ -21,6 +21,7 @@ const SHA256 = require("crypto-js/sha256");
 // // 4. Mettre à jour son histoire (post) et/ou se réinscrire - uniquement si le statut est inactive
 // // 5. Voter (post) uniquement si Active
 // // 6. Supprimer son compte (delete) sauf si statut == Active, Registered ou BlackList
+// // 7. Récupérer les story_details d'une histoire en fonction de son id
 // Routes pour les admins :
 // // 1. Récupérer tous les auteurs (get)
 // // 2. Récupérer les auteurs selon leur statut (get)
@@ -309,6 +310,20 @@ router.delete("/author/delete", isAuthenticated, async (req, res) => {
     res
       .status(error.status || 500)
       .json({ message: error.message || "Internal Server Error" });
+  }
+});
+
+// 7. Récupérer les story_details d'une histoire en fonction de son id (get)
+router.get("/author/:storyId", isAuthenticated, async (req, res) => {
+  try {
+    const story = {};
+    const author = await Author.findById(req.params.storyId);
+    story.url = author.story_details.story_url;
+    story.title = author.story_details.story_title;
+    story.cover = author.story_details.story_cover;
+    return res.status(200).json(story);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
