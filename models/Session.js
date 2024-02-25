@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const Session = mongoose.model("Session", {
   status: String,
-  index: Number,
+  name: String,
   length: Number,
   weeks: Array,
   results: [

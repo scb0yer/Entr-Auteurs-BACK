@@ -3,6 +3,7 @@ const router = express.Router();
 
 const Session = require("../models/Session");
 const Author = require("../models/Author");
+const Book = require("../models/Book");
 const isAdmin = require("../middlewares/isAdmin");
 
 // Routes pour les visiteurs :
@@ -16,8 +17,8 @@ const isAdmin = require("../middlewares/isAdmin");
 // 1. Récupérer les résultats d'une session (get)
 router.get("/session/:index", async (req, res) => {
   try {
-    const index = req.params.index;
-    const session = await Session.findOne({ index });
+    const name = req.params.index;
+    const session = await Session.findOne({ name });
     if (session.status === "ongoing") {
       throw {
         status: 404,
@@ -179,6 +180,17 @@ router.post("/admin/endSession", isAdmin, async (req, res) => {
         { new: true }
       );
       await author.save();
+    }
+    for (let r = 0; r < results.length; r++) {
+      const book = await Book.findOne({
+        "story_details.story_url": results[r].story_url,
+      });
+      const concours = [...book.concours];
+      concours.push({ session_name: session.name, rank: results[r].rank });
+      const bookUpdated = await Book.findByIdAndUpdate(book._id, {
+        concours,
+      });
+      await bookUpdated.save();
     }
     return res.status(200).json(sessionTerminated);
   } catch (error) {

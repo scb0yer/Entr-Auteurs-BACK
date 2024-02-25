@@ -3,6 +3,7 @@ const router = express.Router();
 
 const Author = require("../models/Author");
 const Session = require("../models/Session");
+const Book = require("../models/Book");
 const isAuthenticated = require("../middlewares/isAuthenticated");
 const isAdmin = require("../middlewares/isAdmin");
 const newTirage = require("../functions/newTirage");
@@ -13,18 +14,18 @@ const SHA256 = require("crypto-js/sha256");
 
 // Routes pour les visiteurs:
 // // 1. Récupérer les auteurs selon leur statut (get) / seulement Noms et story_details
-// // 2. Créer un nouvel auteur (post)
+// // 👀 2. Créer un nouvel auteur (post) - récupérer tous les éléments de connexion de main
 // Routes pour les auteurs :
 // // 1. Se connecter (post)
-// // 2. Récupérer les informations d'un auteur et le numéro de la semaine (de la session en cours) et ses stories assigned (get)
-// // 3. Mettre à jour son mot de passe (post)
-// // 4. Mettre à jour son histoire (post) et/ou se réinscrire - uniquement si le statut est inactive
+// // 2. ( à intégrer dans /writer ) Récupérer les informations d'un auteur et le numéro de la semaine (de la session en cours) et ses stories assigned (get)
+// // 🤪3. Mettre à jour son mot de passe (post)
+// // 👀 4. Mettre à jour son histoire (post) et/ou se réinscrire - uniquement si le statut est inactive
 // // 5. Voter (post) uniquement si Active
-// // 6. Supprimer son compte (delete) sauf si statut == Active, Registered ou BlackList
+// // 🤪6. Supprimer son compte (delete) sauf si statut == Active, Registered ou BlackList
 // Routes pour les admins :
-// // 1. Récupérer tous les auteurs (get)
-// // 2. Modifier le statut d'un auteur (post)
-// // 3. Lancer une session (post)
+// //  1. Récupérer tous les auteurs (get)
+// //  2. Modifier le statut d'un auteur (post)
+// //  3. Lancer une session (post)
 
 // --------------------------- Routes pour les Visiteurs ---------------------------
 
@@ -344,14 +345,12 @@ router.get("/admin/authors", isAdmin, async (req, res) => {
     const count = await Author.countDocuments();
     const nbRegistered = await Author.countDocuments({ status: "Registered" });
     const nbActive = await Author.countDocuments({ status: "Active" });
-    return res
-      .status(200)
-      .json({
-        count: count,
-        nbRegistered: nbRegistered,
-        nbActive: nbActive,
-        authors: authors,
-      });
+    return res.status(200).json({
+      count: count,
+      nbRegistered: nbRegistered,
+      nbActive: nbActive,
+      authors: authors,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -381,7 +380,6 @@ router.post("/admin/changeStatus/:id", isAdmin, async (req, res) => {
 // 3. Lancer une session : Attribuer les stories_assigned à chaque auteur dont le statut est registered et passer leur statut en active
 router.post("/admin/newSession/", isAdmin, async (req, res) => {
   try {
-    const sessions = await Session.find();
     const ongoing = await Session.findOne({ status: "ongoing" });
     if (ongoing !== null) {
       return res
@@ -426,10 +424,52 @@ router.post("/admin/newSession/", isAdmin, async (req, res) => {
         }
         filter.status = "Active";
         const activeAuthors = await Author.find(filter);
-        const index = sessions.length + 1;
+        const dateToday = new Date();
+        const year = dateToday.getFullYear();
+        const monthValue = dateToday.getUTCMonth() + 1;
+        let month = "";
+        switch (monthValue) {
+          case 1:
+            month = "Jan";
+            break;
+          case 2:
+            month = "Fev";
+            break;
+          case 3:
+            month = "Mar";
+            break;
+          case 4:
+            month = "Avr";
+            break;
+          case 5:
+            month = "Mai";
+            break;
+          case 6:
+            month = "Juin";
+            break;
+          case 7:
+            month = "Juil";
+            break;
+          case 8:
+            month = "Aoû";
+            break;
+          case 9:
+            month = "Sep";
+            break;
+          case 10:
+            month = "Oct";
+            break;
+          case 11:
+            month = "Nov";
+            break;
+          case 12:
+            month = "Dec";
+            break;
+          default:
+        }
         const newSession = new Session({
           status: "ongoing",
-          index: index,
+          name: `${month}/${year}`,
           length: length,
           weeks: [1],
         });
