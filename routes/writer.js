@@ -47,12 +47,16 @@ const convertToBase64 = (file) => {
 // --------------------------- Routes pour les Visiteurs ---------------------------
 
 // 1. Récupérer tous les auteurs, leur dernière histoire ajoutée et le nombre de reviews laissées (get)
+// --- rien à transmettre
 router.get("/writers", async (req, res) => {
   try {
-    const writers = await Writer.find({ status: "Active" })
+    const writers = await Writer.find({ "writer_details.status": "Active" })
       .select("writer_details")
       .populate(`stories_written.book_written`);
-    const count = await Writer.countDocuments();
+    const count = await Writer.countDocuments({
+      "writer_details.status": "Active",
+    });
+    console.log(writers);
     return res.status(200).json({ count, writers });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -73,8 +77,8 @@ router.post("/signup", fileUpload(), async (req, res) => {
       discord,
       email,
       password,
-      mature,
     } = req.body;
+    let mature = req.body.mature;
     let banner = "";
     if (req.files) {
       const pictureToUpload = req.files.picture;
@@ -85,6 +89,15 @@ router.post("/signup", fileUpload(), async (req, res) => {
       banner = result.secure_url;
     }
     const birthday = new Date(`${year}-${month}-${day}`);
+    const today = new Date();
+    const year2 = today.getFullYear();
+    const month2 = today.getMonth();
+    const day2 = today.getUTCDate();
+    const minYear = year2 - 18;
+    const majeurDate = new Date(minYear, month2, day2);
+    if (birthday > majeurDate) {
+      mature = false;
+    }
     const last_connexion = new Date();
     const role = "Auteur";
     const status = "Active";
@@ -149,13 +162,14 @@ router.post("/signup", fileUpload(), async (req, res) => {
 });
 
 // 3. Récupérer les informations d'un auteur (writer_details, stories_written, reviews_count) (get)
+// --- uniquement params.
 router.get("/writer/:id", async (req, res) => {
   try {
     const writer = await Writer.findById(req.params.id)
       .select("writer_details public_progress")
       .populate([`stories_written.book_written`, `stories_read.book_read`]);
     writer.views++;
-    if (writer.status === "Blacklisted") {
+    if (writer.writer_details.status === "Blacklisted") {
       return res.status(400).json({
         message: "La fiche de cet auteur n'est plus visible.",
       });
@@ -196,7 +210,7 @@ router.post("/writer/login", async (req, res) => {
         discord_checked: writer.discord_checked,
       };
       console.log("Mot de passe OK 👌");
-      if (writer.status === "Blacklisted") {
+      if (writer.writer_details.status === "Blacklisted") {
         return res.status(400).json({
           message:
             "Ton compte a été suspendu. Si tu n'en connais pas la raison, contacte un administrateur.",
@@ -232,10 +246,11 @@ router.post("/writer/login", async (req, res) => {
 });
 
 // 2. Récupérer les informations d'un auteur et les informations sur les histoires assigned, read and written
+// --- uniquement params.
 router.get("/writer", writerIsAuthenticated, async (req, res) => {
   try {
     const writerFound = req.writerFound;
-    if (writerFound.status === "Blacklisted") {
+    if (writerFound.writer_details.status === "Blacklisted") {
       return res.status(400).json({
         message:
           "Ton compte a été suspendu. Si tu n'en connais pas la raison, contacte un administrateur.",
@@ -261,7 +276,7 @@ router.post(
   async (req, res) => {
     try {
       const writerFound = req.writerFound;
-      if (writerFound.status === "Blacklisted") {
+      if (writerFound.writer_details.status === "Blacklisted") {
         return res.status(400).json({
           message:
             "Ton compte a été suspendu. Si tu n'en connais pas la raison, contacte un administrateur.",
@@ -322,6 +337,7 @@ router.post(
 );
 
 // 4. Marquer une histoire comme déjà lue.
+// --- uniquement params.
 router.post(
   "/writer/read/:story_id",
   writerIsAuthenticated,
@@ -329,7 +345,7 @@ router.post(
     try {
       let count = 0;
       const writerFound = req.writerFound;
-      if (writerFound.status === "Blacklisted") {
+      if (writerFound.writer_details.status === "Blacklisted") {
         return res.status(400).json({
           message:
             "Ton compte a été suspendu. Si tu n'en connais pas la raison, contacte un administrateur.",
@@ -343,6 +359,20 @@ router.post(
           count++;
         }
       }
+      for (let s = 0; s < writerFound.stories_written.length; s++) {
+        if (
+          JSON.stringify(writerFound.stories_written[s].book_written).slice(
+            1,
+            25
+          ) === req.params.story_id
+        ) {
+          return res.status(400).json({
+            message:
+              "Tu ne peux pas marquer comme lue une histoire dont tu es l'auteur(e).",
+          });
+        }
+      }
+
       if (count === 0) {
         const nb_stories_read = writerFound.nb_stories_read + 1;
         const stories_read = [...writerFound.stories_read];
@@ -386,7 +416,7 @@ router.post(
   async (req, res) => {
     try {
       const writerFound = req.writerFound;
-      if (writerFound.status === "Blacklisted") {
+      if (writerFound.writer_details.status === "Blacklisted") {
         return res.status(400).json({
           message:
             "Ton compte a été suspendu. Si tu n'en connais pas la raison, contacte un administrateur.",
@@ -459,7 +489,6 @@ router.post(
                   d++
                 ) {
                   if (progress[y].year.months[m].days[d].day === day) {
-                    console.log(progress[y].year.months[m].days[d]);
                     if (req.params.action === "add") {
                       progress[y].year.months[m].days[d].count +=
                         req.body.count;
@@ -524,14 +553,55 @@ router.post(
   writerIsAuthenticated,
   async (req, res) => {
     try {
-      if (req.writerFound.status === "Blacklisted") {
+      const messagesList = [
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156856/entrauteurs/messages/wine_qphgtq.gif",
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156856/entrauteurs/messages/typing_fsoncc.gif",
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156856/entrauteurs/messages/tired-sleep_ud0nnn.gif",
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156855/entrauteurs/messages/thanks_cvl5nn.gif",
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156855/entrauteurs/messages/search_swa11z.gif",
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156855/entrauteurs/messages/sad_boybdk.gif",
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156854/entrauteurs/messages/penguin-ganbatte_lr9kbf.gif",
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156854/entrauteurs/messages/miss-you_rwokmy.gif",
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156854/entrauteurs/messages/mad-angry_nbbbo5.gif",
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156853/entrauteurs/messages/kisses_d3p7ym.gif",
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156853/entrauteurs/messages/luck_sbj71c.gif",
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156853/entrauteurs/messages/hello_dxk6rc.gif",
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156852/entrauteurs/messages/dream-it-do-it_dwzxql.gif",
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156852/entrauteurs/messages/coffee_cfar5r.gif",
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156852/entrauteurs/messages/clap_dqgpor.gif",
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156852/entrauteurs/messages/cat-computer_xrwklq.gif",
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156852/entrauteurs/messages/angry-typing_o3p993.gif",
+        "https://res.cloudinary.com/dlltxf0rr/image/upload/v1709156852/entrauteurs/messages/birthday_s0oxux.gif",
+      ];
+      if (req.writerFound.writer_details.status === "Blacklisted") {
         return res.status(400).json({
           message:
             "Ton compte a été suspendu. Si tu n'en connais pas la raison, contacte un administrateur.",
         });
       }
+      let message = "";
+      let count = 0;
+      for (let m = 0; m < messagesList.length; m++) {
+        if (req.body.message === messagesList[m]) {
+          message = messagesList[m];
+          count++;
+        }
+      }
+      if (count === 0) {
+        return res.status(400).json({
+          message: "Tu ne peux envoyer un stickers que parmi ceux proposés.",
+        });
+      }
       const sender = req.writerFound.writer_details.username;
-      const message = req.body.message;
+      console.log(req.writerFound._id);
+      if (
+        JSON.stringify(req.writerFound._id).slice(1, 25) ===
+        req.params.writer_id
+      ) {
+        return res.status(400).json({
+          message: "Tu ne peux pas t'envoyer de message à toi-même.",
+        });
+      }
       const writer = await Writer.findById(req.params.writer_id);
       const messages = [...writer.messages];
       messages.push({ sender, message });
@@ -587,6 +657,8 @@ router.post(
 // ---- Authors : Inscriptions en attente pour le concours.
 // ---- Authors :Inscriptions validées pour le concours.
 
+// --- rien à transmettre
+
 router.get("/admin/datas", writerIsAdmin, async (req, res) => {
   try {
     const results = [];
@@ -626,16 +698,21 @@ router.get("/admin/datas", writerIsAdmin, async (req, res) => {
 });
 
 // 2. Modifier les information d'un auteur (post)
+// --- discord_checked // warning
 router.post("/admin/writer/:id", writerIsAdmin, async (req, res) => {
   try {
     const writer = await Writer.findById(req.params.id);
     let discord_checked = writer.discord_checked;
     const warnings = [...writer.warnings];
-    if (req.body.discord) {
+    if (req.body.discord_checked) {
       discord_checked = req.body.discord_checked;
     }
     if (req.body.warning) {
-      warnings.push(req.body.warning);
+      const newWarning = {
+        admin: req.adminFound.writer_details.username,
+        warning: req.body.warning,
+      };
+      warnings.push(newWarning);
     }
     const writerToUpdate = await Writer.findByIdAndUpdate(
       req.params.id,

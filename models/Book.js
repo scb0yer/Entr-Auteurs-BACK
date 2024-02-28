@@ -22,6 +22,7 @@ const Book = mongoose.model("Book", {
       },
     },
   ],
+  note: Number,
   views: Number,
   readers: [
     {
@@ -34,6 +35,7 @@ const Book = mongoose.model("Book", {
   isChecked: Boolean,
   status: String,
   isRegistered: String,
+  dateOfCreation: Date,
 });
 
 module.exports = Book;

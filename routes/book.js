@@ -23,10 +23,13 @@ const writerIsAdmin = require("../middlewares/writerIsAdmin");
 // --------------------------- Routes pour les Visiteurs ---------------------------
 
 // 1. Récupérer les histoires selon filtres (get)
-// -------- body : filtres facultatifs (isRegistered, category, mature, title)
+// -------- body : OBLIGATOIRE sort:"last_added" ou "note" et filtres facultatifs (isRegistered, category, mature, title)
+// et facultatif limit (multiple de 30)
 router.get("/books", async (req, res) => {
   try {
     const filter = {};
+    const sorting = {};
+    let limit = 30;
     if (req.body) {
       if (req.body.isRegistered) {
         filter.isRegistered = "Yes";
@@ -43,12 +46,28 @@ router.get("/books", async (req, res) => {
       if (req.body.status) {
         filter.status = req.body.status;
       }
+      if (req.body.limit) {
+        limit += req.body.limit;
+      }
+      if (req.body.sort === "last_added") {
+        sorting.dateOfCreation = -1;
+      } else if (req.body.sort === "note") {
+        sorting.note = -1;
+      }
+    } else {
+      return res.status(400).json({
+        message:
+          "Il faut obligatoirement préciser le tri `last_added`ou `note`",
+      });
     }
     const results = [];
-    const books = await Book.find(filter).populate({
-      path: `writer`,
-      select: `writer_details`,
-    });
+    const books = await Book.find(filter)
+      .populate({
+        path: `writer`,
+        select: `writer_details`,
+      })
+      .sort({ product_price: sorting })
+      .limit(limit);
     let count = 0;
     for (let b = 0; b < books.length; b++) {
       if (books[b].writer.writer_details.status === "Active") {
@@ -63,6 +82,7 @@ router.get("/books", async (req, res) => {
 });
 
 // 2. Récupérer une histoire
+// --- uniquement params.
 router.get("/book/:id", async (req, res) => {
   try {
     const book = await Book.findById(req.params.id).populate({
@@ -106,18 +126,36 @@ router.post("/writer/book/add", writerIsAuthenticated, async (req, res) => {
       story_description,
       story_mature,
     } = req.body;
+    if (
+      story_title === undefined ||
+      story_url === undefined ||
+      story_cover === undefined ||
+      story_cat === undefined ||
+      story_description === undefined ||
+      story_mature === undefined
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Tous les champs sont obligatoires 🙀" });
+    }
     const bookAlreadyUsed = await Book.findOne({
       "story_details.story_url": story_url,
     });
     if (bookAlreadyUsed !== null) {
       return res.status(400).json({ message: "Histoire déjà existante 🙀" });
     }
-    if (writerFound.status === "Blacklisted") {
+    if (writerFound.writer_details.status === "Blacklisted") {
       return res.status(400).json({
         message: "Tu n'as plus le droit d'ajouter une nouvelle histoire !",
       });
     }
-
+    if (!writerFound.writer_details.mature && story_mature) {
+      return res.status(400).json({
+        message:
+          "Un auteur qui ne lit pas d'histoires matures ne peut pas écrire d'histoires matures ! 🙀",
+      });
+    }
+    const dateOfCreation = new Date();
     const newBook = new Book({
       writer: writerFound._id,
       story_details: {
@@ -128,8 +166,10 @@ router.post("/writer/book/add", writerIsAuthenticated, async (req, res) => {
         story_description,
         story_mature,
       },
-      checked: false,
+      isChecked: false,
       views: 0,
+      dateOfCreation,
+      note: 0,
     });
     console.log(
       `Nouvelle histoire ${newBook.story_details.story_title} créée 👏`
@@ -152,10 +192,11 @@ router.post("/writer/book/add", writerIsAuthenticated, async (req, res) => {
 });
 
 // 2. Récupérer toutes les informations sur son histoire
+// --- uniquement params.
 router.get("/writer/book/:id", writerIsAuthenticated, async (req, res) => {
   try {
     const writerFound = req.writerFound;
-    if (writerFound.status === "Blacklisted") {
+    if (writerFound.writer_details.status === "Blacklisted") {
       return res.status(400).json({
         message: "Tu ne peux plus accéder à ces informations.",
       });
@@ -190,7 +231,7 @@ router.get("/writer/book/:id", writerIsAuthenticated, async (req, res) => {
 router.post("/writer/book/update", writerIsAuthenticated, async (req, res) => {
   try {
     const writerFound = req.writerFound;
-    if (writerFound.status === "Blacklisted") {
+    if (writerFound.writer_details.status === "Blacklisted") {
       return res.status(400).json({
         message: "Tu ne peux plus modifier les informations de ton histoire.",
       });
@@ -210,12 +251,12 @@ router.post("/writer/book/update", writerIsAuthenticated, async (req, res) => {
     if (
       req.body.isRegistered &&
       bookWriter_id === writerFound_id &&
-      writerFound.writer_details === "Active"
+      writerFound.writer_details.status === "Active"
     ) {
       if (writerFound.discord_checked === false) {
         return res.status(400).json({
           message:
-            "Tu ne peux inscrire une histoire que si ta présence sur le serveur Discord a été validée. Si tu es bien présent sur le Discord, contacte un administrateur pour qu'il valide ton compte.",
+            "Tu ne peux inscrire une histoire que si ta présence sur le serveur Discord a été validée. Si tu es bien présent(e) sur le Discord, contacte un administrateur pour qu'il valide ton compte.",
         });
       } else {
         const stories = await Writer.findById(writerFound._id).populate(

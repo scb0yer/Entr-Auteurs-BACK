@@ -30,6 +30,7 @@ const SHA256 = require("crypto-js/sha256");
 // --------------------------- Routes pour les Visiteurs ---------------------------
 
 // 1. Récupérer tous les auteurs (get)
+// --- uniquement params.
 router.get("/authors/:status", async (req, res) => {
   try {
     const filter = {};

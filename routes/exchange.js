@@ -3,14 +3,21 @@ const router = express.Router();
 
 const writerIsAdmin = require("../middlewares/writerIsAdmin");
 const newDraw = require("../functions/newDraw");
+const checkStoriesRead = require("../functions/checkStoriesRead");
 
 const Exchange = require("../models/Exchange");
 const Writer = require("../models/Writer");
 const Book = require("../models/Book");
 
 // route pour lancer une session et attribuer les stories aux writers enregistrés
+// --- rien à transmettre
 router.post("/admin/exchange/new", writerIsAdmin, async (req, res) => {
   try {
+    const findExchange = await Exchange.findOne({ status: "ongoing" });
+    if (findExchange) {
+      return res.status(400).json({ message: "Un échange est déjà en cours" });
+    }
+
     const storyNotChecked = await Book.findOne({
       isRegistered: "Yes",
       isChecked: false,
@@ -24,116 +31,170 @@ router.post("/admin/exchange/new", writerIsAdmin, async (req, res) => {
 
     const draw = [];
     const result = {};
+    const today = new Date();
+    const year = today.getFullYear();
+    const monthValue = today.getUTCMonth() + 2;
+    let month = "";
+    switch (monthValue) {
+      case 1:
+        month = "Janvier";
+        break;
+      case 2:
+        month = "Fevrier";
+        break;
+      case 3:
+        month = "Mars";
+        break;
+      case 4:
+        month = "Avril";
+        break;
+      case 5:
+        month = "Mai";
+        break;
+      case 6:
+        month = "Juin";
+        break;
+      case 7:
+        month = "Juillet";
+        break;
+      case 8:
+        month = "Aout";
+        break;
+      case 9:
+        month = "Septembre";
+        break;
+      case 10:
+        month = "Octobre";
+        break;
+      case 11:
+        month = "Novembre";
+        break;
+      case 12:
+        month = "Decembre";
+        break;
+      default:
+    }
+    const name = `${month}-${year}`;
     const categories = ["Imaginaire", "Romance", "Autre"];
     for (let c = 0; c < categories.length; c++) {
       // Récupérer les données de la base
 
-      const storiesNotMature = await Book.find({
+      let storiesNotMature = await Book.find({
         isRegistered: "Yes",
         "story_details.story_mature": false,
         "story_details.story_cat": categories[c],
       }).populate({ path: "writer" });
 
-      const storiesMature = await Book.find({
+      let storiesMature = await Book.find({
         isRegistered: "Yes",
         "story_details.story_mature": true,
         "story_details.story_cat": categories[c],
       }).populate({ path: "writer" });
 
-      if (storiesNotMature.length + storiesMature.length < 2) {
+      if (storiesNotMature.length + storiesMature.length < 5) {
         result[
           categories[c]
         ] = `Pas assez de participants pour lancer un tirage`;
-        break;
-      }
-
-      let exchanges = [];
-      for (i = 0; ; i++) {
-        console.log(`essai n°${i}`);
-        exchanges = newDraw(storiesNotMature, storiesMature);
-        if (exchanges && exchanges !== "error") {
-          result[categories[c]] = exchanges;
-          for (e = 0; e < exchanges.length; e++) {
-            draw.push(exchanges[e]);
+        console.log(`tirage ${categories[c]} annulé`);
+      } else {
+        const writersNotMature = [];
+        const writersMature = [];
+        for (let s = 0; s < storiesNotMature.length; s++) {
+          if (storiesNotMature[s].writer.writer_details.mature === false) {
+            writersNotMature.push(storiesNotMature[s].writer._id);
+          } else {
+            writersMature.push(storiesNotMature[s].writer._id);
           }
-          break;
         }
-        if (draw === "error" && i === 5000) {
-          result[
-            categories[c]
-          ] = `Pas assez de participants pour lancer un tirage`;
-          break;
+        for (let s = 0; s < storiesMature.length; s++) {
+          writersMature.push(storiesMature[s].writer._id);
+        }
+        const writersToUnregister = await checkStoriesRead(
+          writersNotMature,
+          writersMature,
+          storiesNotMature,
+          storiesMature
+        );
+
+        if (writersToUnregister) {
+          for (let w = 0; w < writersToUnregister.length; w++) {
+            const writerToUnregister = await Book.findOneAndUpdate(
+              {
+                writer: writersToUnregister[w],
+                isRegistered: "Yes",
+              },
+              { isRegistered: "No" },
+              { new: true }
+            );
+            await writerToUnregister.save();
+          }
+
+          storiesNotMature = await Book.find({
+            isRegistered: "Yes",
+            "story_details.story_mature": false,
+            "story_details.story_cat": categories[c],
+          }).populate({ path: "writer" });
+
+          storiesMature = await Book.find({
+            isRegistered: "Yes",
+            "story_details.story_mature": true,
+            "story_details.story_cat": categories[c],
+          }).populate({ path: "writer" });
+        } else {
+          console.log("Pas d'auteurs à supprimer");
+        }
+        let exchanges = [];
+        for (i = 0; i < 51; i++) {
+          console.log(`essai n°${i}`);
+          exchanges = newDraw(storiesNotMature, storiesMature);
+          console.log(exchanges);
+          if (exchanges && exchanges !== "error") {
+            result[categories[c]] = exchanges;
+            for (e = 0; e < exchanges.length; e++) {
+              draw.push(exchanges[e]);
+            }
+            break;
+          }
+          if (exchanges === "error" && i === 50) {
+            result[categories[c]] = `Tirage impossible`;
+            break;
+          }
+        }
+        if (exchanges !== "error") {
+          for (d = 0; d < draw.length; d++) {
+            const book = await Book.findById(draw[d].book);
+            const readers = [...book.readers];
+            readers.push(draw[d].reviewer);
+            const writer = await Book.findByIdAndUpdate(draw[d].book, {
+              isRegistered: "No",
+              status: "Active",
+              readers,
+            });
+            const reviewer = await Writer.findById(draw[d].reviewer);
+            const stories_read = [...reviewer.stories_read];
+            stories_read.push({ book_read: draw[d].book });
+            const nb_stories_read = reviewer.nb_stories_read + 1;
+            const stories_assigned = [...reviewer.stories_assigned];
+            stories_assigned.push({
+              session: name,
+              book_assigned: draw[d].book,
+            });
+            const reviewerToUpdate = await Writer.findByIdAndUpdate(
+              draw[d].reviewer,
+              {
+                stories_read,
+                nb_stories_read,
+                stories_assigned,
+              }
+            );
+            await reviewerToUpdate.save();
+            draw[d].writer = writer.writer;
+          }
+          result[categories[c]] = [{ exchanges, writersToUnregister }];
         }
       }
     }
-    if (draw) {
-      const today = new Date();
-      const year = today.getFullYear();
-      const monthValue = today.getUTCMonth() + 2;
-      let month = "";
-      switch (monthValue) {
-        case 1:
-          month = "Janvier";
-          break;
-        case 2:
-          month = "Fevrier";
-          break;
-        case 3:
-          month = "Mars";
-          break;
-        case 4:
-          month = "Avril";
-          break;
-        case 5:
-          month = "Mai";
-          break;
-        case 6:
-          month = "Juin";
-          break;
-        case 7:
-          month = "Juillet";
-          break;
-        case 8:
-          month = "Aout";
-          break;
-        case 9:
-          month = "Septembre";
-          break;
-        case 10:
-          month = "Octobre";
-          break;
-        case 11:
-          month = "Novembre";
-          break;
-        case 12:
-          month = "Decembre";
-          break;
-        default:
-      }
-      const name = `${month}-${year}`;
-      for (d = 0; d < draw.length; d++) {
-        const writer = await Book.findByIdAndUpdate(draw[d].book, {
-          isRegistered: "No",
-          status: "Active",
-        });
-        const reviewer = await Writer.findById(draw[d].reviewer);
-        const stories_read = [...reviewer.stories_read];
-        stories_read.push({ book_read: draw[d].book });
-        const nb_stories_read = reviewer.nb_stories_read + 1;
-        const stories_assigned = [...reviewer.stories_assigned];
-        stories_assigned.push({ session: name, book_assigned: draw[d].book });
-        const reviewerToUpdate = await Writer.findByIdAndUpdate(
-          draw[d].reviewer,
-          {
-            stories_read,
-            nb_stories_read,
-            stories_assigned,
-          }
-        );
-        await reviewerToUpdate.save();
-        draw[d].writer = writer.writer;
-      }
-
+    if (draw.length > 0) {
       const status = "ongoing";
       const newExchange = new Exchange({
         status,
@@ -142,7 +203,6 @@ router.post("/admin/exchange/new", writerIsAdmin, async (req, res) => {
       });
       await newExchange.save();
     }
-
     return res.status(200).json(result);
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -150,6 +210,7 @@ router.post("/admin/exchange/new", writerIsAdmin, async (req, res) => {
 });
 
 // route pour terminer la session
+// --- rien à transmettre
 router.post("/admin/exchange/complete", writerIsAdmin, async (req, res) => {
   try {
     const exchange = await Exchange.findOne({ status: "ongoing" }).populate([

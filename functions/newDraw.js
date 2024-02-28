@@ -122,7 +122,6 @@ const newDraw = (storiesNotMature, storiesMature) => {
     }
 
     // Créer un tirage avec les histoires non matures
-
     const resultNotMature = newExchange(writersNotMature, storiesToAssign);
     if (resultNotMature === "error") {
       return "error";
@@ -143,11 +142,13 @@ const newDraw = (storiesNotMature, storiesMature) => {
         writersMature.push({
           writer: storiesMature[s].writer._id,
           stories_read: storiesMature[s].writer.stories_read,
+          book: storiesMature[s]._id,
         });
       }
       // Créer le tirage des histoires matures
       const resultMature = newExchange(writersMature, storiesToAssign);
-      if (resultMature === "error") {
+
+      if (resultMature === "error" || !resultMature) {
         return "error";
       } else {
         // Intégrer les résultats au draw

@@ -4,6 +4,7 @@ const router = express.Router();
 const Review = require("../models/Review");
 const Writer = require("../models/Writer");
 const Contestation = require("../models/Contestation");
+const Book = require("../models/Book");
 
 const writerIsAuthenticated = require("../middlewares/writerIsAuthenticated");
 const writerIsAdmin = require("../middlewares/writerIsAdmin");
@@ -55,6 +56,7 @@ router.post(
 
 // Routes pour les admins :
 // // 1. Afficher les contestations
+// --- rien à transmettre
 router.get("/admin/contestations", writerIsAdmin, async (req, res) => {
   try {
     const contestations = await Contestation.find().populate([
@@ -137,6 +139,42 @@ router.post("/admin/contestation/:id", writerIsAdmin, async (req, res) => {
         { new: true }
       );
       await reviewToUpdate.save();
+
+      const book = await Book.findById(reviewToUpdate.book).populate(
+        `story_reviews.story_review`
+      );
+      let story_reviews = [];
+      let note = 0;
+      if (book.story_reviews.length > 0) {
+        story_reviews = [...book.story_reviews];
+        for (let r = 0; r < story_reviews.length; r++) {
+          const review = await Review.findById(story_reviews[r]._id);
+          note +=
+            review.review_details.orthographe.note1 +
+            review.review_details.style.note2 +
+            review.review_details.coherence.note3 +
+            review.review_details.suspens.note4 +
+            review.review_details.dialogues.note5;
+        }
+      }
+      note +=
+        reviewToUpdate.review_details.orthographe.note1 +
+        reviewToUpdate.review_details.style.note2 +
+        reviewToUpdate.review_details.coherence.note3 +
+        reviewToUpdate.review_details.suspens.note4 +
+        reviewToUpdate.review_details.dialogues.note5;
+      story_reviews.push({ story_review: reviewToUpdate._id });
+      note = note / 2 / story_reviews.length;
+      const bookToUpdate = await Book.findByIdAndUpdate(
+        book._id,
+        {
+          note,
+          story_reviews,
+        },
+        { new: true }
+      );
+      await bookToUpdate.save();
+
       const writer = await Writer.findById(reviewToUpdate.writer);
       const warnings = [...writer.warnings];
       warnings.push({

@@ -56,7 +56,7 @@ router.post("/writer/review/add", writerIsAuthenticated, async (req, res) => {
           book,
           reviewer,
           writer,
-          reviews_details: {
+          review_details: {
             orthographe: { note1, comment1 },
             style: { note2, comment2 },
             coherence: { note3, comment3 },
@@ -79,16 +79,10 @@ router.post("/writer/review/add", writerIsAuthenticated, async (req, res) => {
         );
         await exchangeToUpdate.save();
 
-        const bookToFind = await Book.findById(book);
-        const story_reviews = [...bookToFind.story_reviews];
-        story_reviews.push(newReview._id);
-        const bookToUpdate = await Book.findByIdAndUpdate(bookToFind, {
-          story_reviews,
-        });
-        await bookToUpdate.save();
-        const stories_assigned = [...req.writerFound.stories_assigned];
         const storyToFind = JSON.stringify(book).slice(1, 25);
-        for (let s = 0; s < stories_assigned; s++) {
+
+        const stories_assigned = [...req.writerFound.stories_assigned];
+        for (let s = 0; s < stories_assigned.length; s++) {
           const storyFound = JSON.stringify(
             stories_assigned[s].book_assigned
           ).slice(1, 25);
@@ -143,7 +137,42 @@ router.post(
         { new: true }
       );
       await reviewToUpdate.save();
-      return res.status(200).json(reviewToUpdate);
+
+      const book = await Book.findById(reviewToUpdate.book).populate(
+        `story_reviews.story_review`
+      );
+      let story_reviews = [];
+      let note = 0;
+      if (book.story_reviews.length > 0) {
+        story_reviews = [...book.story_reviews];
+        for (let r = 0; r < story_reviews.length; r++) {
+          const review = await Review.findById(story_reviews[r]._id);
+          note +=
+            review.review_details.orthographe.note1 +
+            review.review_details.style.note2 +
+            review.review_details.coherence.note3 +
+            review.review_details.suspens.note4 +
+            review.review_details.dialogues.note5;
+        }
+      }
+      note +=
+        reviewToUpdate.review_details.orthographe.note1 +
+        reviewToUpdate.review_details.style.note2 +
+        reviewToUpdate.review_details.coherence.note3 +
+        reviewToUpdate.review_details.suspens.note4 +
+        reviewToUpdate.review_details.dialogues.note5;
+      story_reviews.push({ story_review: reviewToUpdate._id });
+      note = note / 2 / story_reviews.length;
+      const bookToUpdate = await Book.findByIdAndUpdate(
+        book._id,
+        {
+          note,
+          story_reviews,
+        },
+        { new: true }
+      );
+      await bookToUpdate.save();
+      return res.status(200).json(bookToUpdate);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
