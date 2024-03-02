@@ -91,12 +91,12 @@ router.get("/books", async (req, res) => {
     });
     let count = 0;
     for (let b = 0; b < books.length; b++) {
-      if (books[b].writer.writer_details.status !== "Active") {
+      if (books[b].writer.writer_details.status !== "BlackListed") {
         results.push(books[b]);
       }
     }
     for (let b = 0; b < booksCount.length; b++) {
-      if (booksCount[b].writer.writer_details.status !== "Active") {
+      if (booksCount[b].writer.writer_details.status !== "BlackListed") {
         count++;
       }
     }
