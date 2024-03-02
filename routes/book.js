@@ -85,10 +85,18 @@ router.get("/books", async (req, res) => {
       .sort(sorting)
       .limit(limit)
       .skip((page - 1) * limit);
+    const booksCount = await Book.find(filter).populate({
+      path: `writer`,
+      select: `writer_details`,
+    });
     let count = 0;
     for (let b = 0; b < books.length; b++) {
-      if (books[b].writer.writer_details.status === "Active") {
+      if (books[b].writer.writer_details.status !== "Active") {
         results.push(books[b]);
+      }
+    }
+    for (let b = 0; b < booksCount.length; b++) {
+      if (booksCount[b].writer.writer_details.status !== "Active") {
         count++;
       }
     }
