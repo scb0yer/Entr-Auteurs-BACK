@@ -4,6 +4,7 @@ const router = express.Router();
 const Writer = require("../models/Writer");
 const Book = require("../models/Book");
 const Exchange = require("../models/Exchange");
+const Session = require("../models/Session");
 
 const writerIsAuthenticated = require("../middlewares/writerIsAuthenticated");
 const writerIsAdmin = require("../middlewares/writerIsAdmin");
@@ -37,6 +38,11 @@ router.get("/books", async (req, res) => {
     if (req.body) {
       if (req.body.isRegistered) {
         filter.isRegistered = "Yes";
+      }
+      if (req.body.concours) {
+        const session = await Session.find({ status: "Inactive" });
+        const session_name = session[session.length].name;
+        filter.concours.session_name = session_name;
       }
       if (req.body.category) {
         filter.story_details.story_cat = req.body.category;
@@ -76,7 +82,7 @@ router.get("/books", async (req, res) => {
         path: `writer`,
         select: `writer_details`,
       })
-      .sort({ product_price: sorting })
+      .sort(sorting)
       .limit(limit)
       .skip((page - 1) * limit);
     let count = 0;
