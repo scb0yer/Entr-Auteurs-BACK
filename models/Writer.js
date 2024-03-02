@@ -8,8 +8,10 @@ const Writer = mongoose.model("Writer", {
     birthdate: Date,
     facebook: String,
     instagram: String,
+    wattpad: String,
     discord: String,
     mature: Boolean,
+    description: String,
   },
   connexion_details: {
     email: String,
@@ -58,6 +60,7 @@ const Writer = mongoose.model("Writer", {
   ],
   nb_stories_read: Number,
   public_progress: Boolean,
+  target_progress: Number,
   progress: [
     {
       year: {

@@ -74,9 +74,12 @@ router.post("/signup", fileUpload(), async (req, res) => {
       year,
       facebook,
       instagram,
+      wattpad,
       discord,
       email,
       password,
+      description,
+      target_progress,
     } = req.body;
     let mature = req.body.mature;
     let banner = "";
@@ -107,10 +110,17 @@ router.post("/signup", fileUpload(), async (req, res) => {
     const usernameAlreadyUsed = await Writer.findOne({
       "writer_details.username": username,
     });
-    if (emailAlreadyUsed !== null || usernameAlreadyUsed !== null) {
+    const wattpadAlreadyUsed = await Writer.findOne({
+      "writer_details.wattpad": wattpad,
+    });
+    if (
+      emailAlreadyUsed !== null ||
+      usernameAlreadyUsed !== null ||
+      wattpadAlreadyUsed !== null
+    ) {
       return res
         .status(400)
-        .json({ message: "Adresse email ou pseudo déjà existant 🙀" });
+        .json({ message: "Adresse email ou compte Wattpad déjà existant 🙀" });
     }
     if (role === "Admin") {
       return res.status(400).json({
@@ -132,8 +142,10 @@ router.post("/signup", fileUpload(), async (req, res) => {
         birthday,
         facebook,
         instagram,
+        wattpad,
         discord,
         mature,
+        description,
       },
       connexion_details: {
         email,
@@ -147,6 +159,7 @@ router.post("/signup", fileUpload(), async (req, res) => {
       discord_checked: false,
       banner,
       public_progress: false,
+      target_progress,
       nb_stories_read: 0,
     });
     console.log(`Nouvel auteur ${newWriter.writer_details.username} créé 👏`);
@@ -268,7 +281,7 @@ router.get("/writer", writerIsAuthenticated, async (req, res) => {
 });
 
 // 3. Mettre à jour ses informations (post)
-// -------- body : facultatif (password, email, messages, public_progress, files.pictures, facebook, instagram, discord, mature )
+// -------- body : facultatif (password, email, messages, public_progress, files.pictures, facebook, instagram, discord, mature, description, target_progress )
 router.post(
   "/writer/update",
   writerIsAuthenticated,
@@ -286,6 +299,7 @@ router.post(
       const writer_details = writerFound.writer_details;
       let banner = writerFound.banner;
       let public_progress = writerFound.public_progress;
+      let target_progress = writerFound.target_progress;
       let messages = writerFound.messages;
       if (req.body.password) {
         connexion_details.salt = uid2(24);
@@ -303,6 +317,9 @@ router.post(
       if (req.body.public_progress) {
         public_progress = req.body.public_progress;
       }
+      if (req.body.target_progress) {
+        target_progress = req.body.target_progress;
+      }
       if (req.files.picture) {
         const pictureToUpload = req.files.picture;
         const result = await cloudinary.uploader.upload(
@@ -311,7 +328,13 @@ router.post(
         );
         banner = result.secure_url;
       }
-      const fields = ["facebook", "instagram", "discord", "mature"];
+      const fields = [
+        "facebook",
+        "instagram",
+        "discord",
+        "mature",
+        "description",
+      ];
       for (let f = 0; f < fields.length; f++) {
         if (req.body[fields[f]]) {
           writer_details[fields[f]] = req.body[fields[f]];
@@ -324,6 +347,7 @@ router.post(
           writer_details,
           banner,
           public_progress,
+          target_progress,
           messages,
         },
         { new: true }
@@ -670,7 +694,7 @@ router.get("/admin/datas", writerIsAdmin, async (req, res) => {
     results.push({ count: nbBooks, books: books });
     const contestations = await Contestation.find({
       $or: [{ status: "unread" }, { status: "pending" }],
-    });
+    }).populate(`book`);
     const nbContestations = await Contestation.countDocuments([
       { status: "unread" },
       { status: "pending" },
@@ -687,7 +711,10 @@ router.get("/admin/datas", writerIsAdmin, async (req, res) => {
       count: nbAuthorsRegistered,
       authorsRegistered: authorsRegistered,
     });
-    const exchange = await Exchange.find({ status: "ongoing" });
+    const exchange = await Exchange.find({ status: "ongoing" }).populate([
+      `draw.reviewer`,
+      `draw.book`,
+    ]);
     results.push({ echange: exchange });
     const session = await Session.findOne({ status: "ongoing" });
     results.push({ concours: session });
@@ -702,6 +729,7 @@ router.get("/admin/datas", writerIsAdmin, async (req, res) => {
 router.post("/admin/writer/:id", writerIsAdmin, async (req, res) => {
   try {
     const writer = await Writer.findById(req.params.id);
+    const writers_details = writer.writer_details;
     let discord_checked = writer.discord_checked;
     const warnings = [...writer.warnings];
     if (req.body.discord_checked) {
@@ -713,10 +741,24 @@ router.post("/admin/writer/:id", writerIsAdmin, async (req, res) => {
         warning: req.body.warning,
       };
       warnings.push(newWarning);
+      if (warnings.length > 2) {
+        writers_details.status = "Blacklisted";
+        for (let s = 0; s < writer.stories_written.length; s++) {
+          const storyToUpdate = await Book.findByIdAndUpdate(
+            `writer.stories_written[s].book_written`,
+            {
+              status: "Offline",
+            },
+            { new: true }
+          );
+          await storyToUpdate.save();
+        }
+      }
     }
     const writerToUpdate = await Writer.findByIdAndUpdate(
       req.params.id,
       {
+        writers_details,
         discord_checked,
         warnings,
       },

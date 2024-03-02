@@ -23,13 +23,17 @@ const writerIsAdmin = require("../middlewares/writerIsAdmin");
 // --------------------------- Routes pour les Visiteurs ---------------------------
 
 // 1. Récupérer les histoires selon filtres (get)
-// -------- body : OBLIGATOIRE sort:"last_added" ou "note" et filtres facultatifs (isRegistered, category, mature, title)
-// et facultatif limit (multiple de 30)
+// -------- body : OBLIGATOIRE sort:"last_added" ou "note" et limit: (Number) et filtres facultatifs (isRegistered, category, mature, title, note (number), writer_id)
+// et facultatif more (Number>1), page (Number>1).
 router.get("/books", async (req, res) => {
   try {
     const filter = {};
     const sorting = {};
-    let limit = 30;
+    let page = 1;
+    if (req.body.page) {
+      page = req.body.page;
+    }
+    let limit = req.body.limit;
     if (req.body) {
       if (req.body.isRegistered) {
         filter.isRegistered = "Yes";
@@ -46,8 +50,14 @@ router.get("/books", async (req, res) => {
       if (req.body.status) {
         filter.status = req.body.status;
       }
-      if (req.body.limit) {
-        limit += req.body.limit;
+      if (req.body.writer_id) {
+        filter.writer = req.body.writer_id;
+      }
+      if (req.body.more) {
+        limit = req.body.limit * req.body.more;
+      }
+      if (req.body.note) {
+        filter.note.$gte = req.body.note;
       }
       if (req.body.sort === "last_added") {
         sorting.dateOfCreation = -1;
@@ -67,7 +77,8 @@ router.get("/books", async (req, res) => {
         select: `writer_details`,
       })
       .sort({ product_price: sorting })
-      .limit(limit);
+      .limit(limit)
+      .skip((page - 1) * limit);
     let count = 0;
     for (let b = 0; b < books.length; b++) {
       if (books[b].writer.writer_details.status === "Active") {
@@ -312,6 +323,17 @@ router.post("/admin/book/:id", writerIsAdmin, async (req, res) => {
     );
     await book.save();
     return res.status(200).json(book);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 2. Supprimer une histoire (delete)
+// -------- seulement params
+router.post("/admin/book/:id", writerIsAdmin, async (req, res) => {
+  try {
+    const book = await Book.findByIdAndDelete(req.params.id);
+    return res.status(200).json({ message: "Le livre a bien été supprimé." });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

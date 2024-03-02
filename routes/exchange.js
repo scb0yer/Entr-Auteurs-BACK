@@ -243,6 +243,16 @@ router.post("/admin/exchange/complete", writerIsAdmin, async (req, res) => {
         );
         await reviewer.save();
         blackListedWriters.push(reviewer.writer_details.username);
+        for (let s = 0; s < reviewer.stories_written.length; s++) {
+          const storyToUpdate = await Book.findByIdAndUpdate(
+            `reviewer.stories_written[s].book_written`,
+            {
+              status: "Offline",
+            },
+            { new: true }
+          );
+          await storyToUpdate.save();
+        }
       }
     }
     const exchangeToUpdate = await Exchange.findByIdAndUpdate(

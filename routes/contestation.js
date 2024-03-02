@@ -123,6 +123,16 @@ router.post("/admin/contestation/:id", writerIsAdmin, async (req, res) => {
       const writers_details = reviewer.writer_details;
       if (warnings.length > 2) {
         writers_details.status = "Blacklisted";
+        for (let s = 0; s < reviewer.stories_written.length; s++) {
+          const storyToUpdate = await Book.findByIdAndUpdate(
+            `reviewer.stories_written[s].book_written`,
+            {
+              status: "Offline",
+            },
+            { new: true }
+          );
+          await storyToUpdate.save();
+        }
       }
       const reviewerToUpdate = await Writer.findByIdAndUpdate(reviewer._id, {
         writers_details,
@@ -185,6 +195,16 @@ router.post("/admin/contestation/:id", writerIsAdmin, async (req, res) => {
       const writers_details = writer.writer_details;
       if (warnings.length > 2) {
         writers_details.status = "Blacklisted";
+        for (let s = 0; s < writer.stories_written.length; s++) {
+          const storyToUpdate = await Book.findByIdAndUpdate(
+            `writer.stories_written[s].book_written`,
+            {
+              status: "Offline",
+            },
+            { new: true }
+          );
+          await storyToUpdate.save();
+        }
       }
       const writerToUpdate = await Writer.findByIdAndUpdate(writer._id, {
         writers_details,
