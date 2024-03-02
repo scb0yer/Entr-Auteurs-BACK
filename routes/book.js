@@ -31,43 +31,43 @@ router.get("/books", async (req, res) => {
     const filter = {};
     const sorting = {};
     let page = 1;
-    if (req.body.page) {
-      page = req.body.page;
+    if (req.query.page) {
+      page = req.query.page;
     }
-    let limit = req.body.limit;
-    if (req.body) {
-      if (req.body.isRegistered) {
+    let limit = req.query.limit;
+    if (req.query) {
+      if (req.query.isRegistered) {
         filter.isRegistered = "Yes";
       }
-      if (req.body.concours) {
+      if (req.query.concours) {
         const session = await Session.find({ status: "Inactive" });
         const session_name = session[session.length].name;
         filter.concours.session_name = session_name;
       }
-      if (req.body.category) {
-        filter.story_details.story_cat = req.body.category;
+      if (req.query.category) {
+        filter.story_details.story_cat = req.query.category;
       }
-      if (req.body.mature) {
-        filter.story_details.story_mature = req.body.mature;
+      if (req.query.mature) {
+        filter.story_details.story_mature = req.query.mature;
       }
-      if (req.body.title) {
-        filter.story_details.story_title = req.body.title;
+      if (req.query.title) {
+        filter.story_details.story_title = req.query.title;
       }
-      if (req.body.status) {
-        filter.status = req.body.status;
+      if (req.query.status) {
+        filter.status = req.query.status;
       }
-      if (req.body.writer_id) {
-        filter.writer = req.body.writer_id;
+      if (req.query.writer_id) {
+        filter.writer = req.query.writer_id;
       }
-      if (req.body.more) {
-        limit = req.body.limit * req.body.more;
+      if (req.query.more) {
+        limit = req.query.limit * req.query.more;
       }
-      if (req.body.note) {
-        filter.note.$gte = req.body.note;
+      if (req.query.note) {
+        filter.note.$gte = req.query.note;
       }
-      if (req.body.sort === "last_added") {
+      if (req.query.sort === "last_added") {
         sorting.dateOfCreation = -1;
-      } else if (req.body.sort === "note") {
+      } else if (req.query.sort === "note") {
         sorting.note = -1;
       }
     } else {
