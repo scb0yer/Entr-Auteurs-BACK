@@ -125,7 +125,10 @@ router.get("/book/:id", async (req, res) => {
           views,
         },
         { new: true }
-      );
+      ).populate({
+        path: `writer`,
+        select: `writer_details`,
+      });
       await bookUpdated.save();
       return res.status(200).json(bookUpdated);
     } else {
