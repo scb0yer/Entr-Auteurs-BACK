@@ -103,7 +103,7 @@ router.post("/signup", fileUpload(), async (req, res) => {
     }
     const last_connexion = new Date();
     const role = "Auteur";
-    const status = "Active";
+    const status = "Pending";
     const emailAlreadyUsed = await Writer.findOne({
       "connexion_details.email": email,
     });
@@ -686,9 +686,24 @@ router.post(
 router.get("/admin/datas", writerIsAdmin, async (req, res) => {
   try {
     const results = [];
-    const writers = await Writer.find({ discord_checked: false });
-    const nbWriters = await Writer.countDocuments({ discord_checked: false });
-    results.push({ count: nbWriters, writers: writers });
+    const discordWriters = await Writer.find({ discord_checked: false });
+    const nbDiscordWriters = await Writer.countDocuments({
+      discord_checked: false,
+    });
+    results.push({
+      countDiscordUnchecked: nbDiscordWriters,
+      discordUnchecked: discordWriters,
+    });
+    const pendingWriters = await Writer.find({
+      "writer_details.username": "Pending",
+    });
+    const nbPendingWriters = await Writer.countDocuments({
+      "writer_details.username": "Pending",
+    });
+    results.push({
+      countPendingWriters: nbPendingWriters,
+      pendingWriters: pendingWriters,
+    });
     const books = await Book.find({ isChecked: false });
     const nbBooks = await Book.countDocuments({ isChecked: false });
     results.push({ count: nbBooks, books: books });
@@ -725,7 +740,7 @@ router.get("/admin/datas", writerIsAdmin, async (req, res) => {
 });
 
 // 2. Modifier les information d'un auteur (post)
-// --- discord_checked // warning
+// --- discord_checked // warning // status -> "Active"
 router.post("/admin/writer/:id", writerIsAdmin, async (req, res) => {
   try {
     const writer = await Writer.findById(req.params.id);
@@ -734,6 +749,9 @@ router.post("/admin/writer/:id", writerIsAdmin, async (req, res) => {
     const warnings = [...writer.warnings];
     if (req.body.discord_checked) {
       discord_checked = req.body.discord_checked;
+    }
+    if (req.body.status) {
+      writers_details.status = req.body.status;
     }
     if (req.body.warning) {
       const newWarning = {
