@@ -47,12 +47,23 @@ const convertToBase64 = (file) => {
 // --------------------------- Routes pour les Visiteurs ---------------------------
 
 // 1. Récupérer tous les auteurs, leur dernière histoire ajoutée et le nombre de reviews laissées (get)
-// --- rien à transmettre
-router.get("/writers", async (req, res) => {
+// --- sort en params (username, read, views, connexion)
+router.get("/writers/:sort", async (req, res) => {
   try {
+    let sorting = {};
+    if (req.params.sort === "connexion") {
+      sorting = { "connexion_details.last_connexion": -1 };
+    }
+    if (req.params.sort === "username") {
+      sorting = { "writer_details.username": 1 };
+    }
+    if (req.params.sort === "read") {
+      sorting = { nb_stories_read: -1 };
+    }
     const writers = await Writer.find({ "writer_details.status": "Active" })
       .select("writer_details")
-      .populate(`stories_written.book_written`);
+      .populate(`stories_written.book_written`)
+      .sort(sorting);
     const count = await Writer.countDocuments({
       "writer_details.status": "Active",
     });
