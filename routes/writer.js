@@ -190,16 +190,21 @@ router.post("/signup", fileUpload(), async (req, res) => {
 router.get("/writer/:id", async (req, res) => {
   try {
     const writer = await Writer.findById(req.params.id)
-      .select("writer_details public_progress")
+      .select(
+        "writer_details public_progress connexion_details.last_connexion stories_read banner views"
+      )
       .populate([`stories_written.book_written`, `stories_read.book_read`]);
-    writer.views++;
+    let views = writer.views;
+    views++;
     if (writer.writer_details.status === "Blacklisted") {
       return res.status(400).json({
         message: "La fiche de cet auteur n'est plus visible.",
       });
     }
     if (writer.public_progress) {
-      const progress = await Writer.findById(req.params.id).select("progress");
+      const progress = await Writer.findById(req.params.id).select(
+        "target_progress progress"
+      );
       writer.progress = progress;
     }
     const writerToUpdate = await Writer.findByIdAndUpdate(req.params.id, {
