@@ -336,14 +336,17 @@ router.post(
       if (req.body.target_progress) {
         target_progress = req.body.target_progress;
       }
-      if (req.files.picture) {
-        const pictureToUpload = req.files.picture;
-        const result = await cloudinary.uploader.upload(
-          convertToBase64(pictureToUpload),
-          { folder: `/entrauteurs` }
-        );
-        banner = result.secure_url;
+      if (req.files) {
+        if (req.files.picture) {
+          const pictureToUpload = req.files.picture;
+          const result = await cloudinary.uploader.upload(
+            convertToBase64(pictureToUpload),
+            { folder: `/entrauteurs` }
+          );
+          banner = result.secure_url;
+        }
       }
+
       const fields = [
         "facebook",
         "instagram",
