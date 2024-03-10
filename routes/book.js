@@ -254,7 +254,8 @@ router.get("/writer/book/:id", writerIsAuthenticated, async (req, res) => {
   }
 });
 
-// 3. Mettre à jour une histoire -id de l'histoire en body (post)
+// 3. Mettre à jour une histoire
+// -------- id de l'histoire en body (post)
 // -------- body : (falcultatif) : isRegistered ("Yes" ou "No"), story_title, story_url, story_cover, story_cat, story_description, story_mature
 router.post("/writer/book/update", writerIsAuthenticated, async (req, res) => {
   try {

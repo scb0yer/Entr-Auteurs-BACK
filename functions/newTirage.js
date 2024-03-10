@@ -21,17 +21,17 @@ const newTirage = (authors) => {
   let id1 = "";
   let id2 = "";
   let index = "";
-  const idLength = participants[0].length;
 
   try {
     // Lister toutes les combinaisons de 2 termes sans répétition dans un tableau allCombinaisons
     for (let p1 = 0; p1 < nbParticipants; p1++) {
       for (let p2 = p1 + 1; p2 < nbParticipants; p2++) {
-        allCombinaisons.push(participants[p1] + participants[p2]);
+        allCombinaisons.push(`${participants[p1]}-${participants[p2]}`);
       }
     }
     // Pour chaque participant, attribuer autant de combinaisons qu'il y a de séries
     for (let p = 0; p < nbParticipants; p++) {
+      console.log(participants[p]);
       combinaisons.push([]);
       length = allCombinaisons.length;
       // Créer un tableau trueCombinaisons avec toutes les combinaisons possibles pour ce participant, l'excluant lui-même
@@ -54,8 +54,8 @@ const newTirage = (authors) => {
         allCombinaisons.sort().shift();
         // Supprimer de trueCombinaisons tous les combinaisons qui contiennent les participants de la combinaison
         // → empêcher que le participant tire deux fois le même participant
-        id1 = tirage.slice(0, idLength);
-        id2 = tirage.slice(idLength);
+        id1 = tirage.split("-")[0];
+        id2 = tirage.split("-")[1];
         for (let a = length - 1; a >= 0; a--) {
           tirage = trueCombinaisons[a];
           if (tirage.includes(id1) || tirage.includes(id2)) {

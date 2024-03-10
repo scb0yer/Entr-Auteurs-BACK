@@ -60,7 +60,7 @@ router.post("/author/signup", writerIsAuthenticated, async (req, res) => {
   try {
     const writerFound = req.writerFound;
     const { email, token, hash, salt } = writerFound.connexion_details;
-    const { username, role, status } = writerFound.writer_details;
+    const username = writerFound.writer_details.username;
     const { story_title, story_url, story_cover } = req.body;
     const emailAlreadyUsed = await Author.findOne({ email });
     if (emailAlreadyUsed !== null) {
@@ -72,16 +72,8 @@ router.post("/author/signup", writerIsAuthenticated, async (req, res) => {
     if (storyAlreadyUsed !== null) {
       return res.status(400).json({ message: "Histoire déjà existante 🙀" });
     }
-    if (role === "Admin") {
-      return res.status(400).json({
-        message: "Vous ne pouvez pas vous auto-attribuer le rôle d'Admin 🙀",
-      });
-    }
-    if (status !== "Pending") {
-      return res.status(400).json({
-        message: "Le statut doit être `Pending` 🙀",
-      });
-    }
+    const status = "Pending";
+    const role = "Auteur";
 
     const newAuthor = new Author({
       email,
@@ -371,16 +363,27 @@ router.get("/admin/authors", isAdmin, async (req, res) => {
 });
 
 // 2. Modifier le statut d'un auteur (post) - uniquement pour admin
+// // status : Active / Inactive / Pending
 router.post("/admin/changeStatus/:id", isAdmin, async (req, res) => {
   try {
+    const status = req.body.status;
     const author = await Author.findByIdAndUpdate(
       req.params.id,
       {
-        status: req.body.status,
+        status,
       },
       { new: true }
     );
     await author.save();
+    const book = await Book.findOneAndUpdate(
+      {
+        "story_details.story_url": author.story_details.story_url,
+      },
+      {
+        statusForConcours: status,
+      }
+    );
+    await book.save();
     res
       .status(200)
       .json(
@@ -401,19 +404,22 @@ router.post("/admin/newSession/", isAdmin, async (req, res) => {
         .json({ message: "Une session est déjà en cours 🙀" });
     }
     const filter = {};
-    let result = "";
     filter.status = "Registered";
     const authors = await Author.find(filter);
-    const nbAuthors = await Author.countDocuments(filter);
+    const nbAuthors = authors.length;
+    const response = {};
+
     const length = (nbAuthors ** 2 - nbAuthors) / 2 / nbAuthors;
+    // Récupérer seulement les id des auteurs.
+
     const authorsId = [];
     for (let i = 0; i < authors.length; i++) {
       authorsId.push(authors[i]._id);
     }
+    // à travers une boucle infinie, appeler newTirage jusqu'à avoir un résultat
     for (i = 0; ; i++) {
-      if (newTirage(authorsId)) {
-        result = newTirage(authorsId);
-        console.log(result.tirage.length);
+      const result = newTirage(authorsId);
+      if (result) {
         for (let a = 0; a < authors.length; a++) {
           const stories_assigned = [];
 
@@ -421,8 +427,8 @@ router.post("/admin/newSession/", isAdmin, async (req, res) => {
             stories_assigned.push({
               week: w + 1,
               stories: [
-                result.tirage[a][w].slice(0, 24),
-                result.tirage[a][w].slice(24),
+                result.tirage[a][w].split("-")[0],
+                result.tirage[a][w].split("-")[1],
               ],
             });
           }
@@ -498,6 +504,7 @@ router.post("/admin/newSession/", isAdmin, async (req, res) => {
         });
         await newSession.save();
         res.status(200).json(activeAuthors);
+        res.status(200).json(response);
         break;
       } else {
         console.log(`essai${i}`);
