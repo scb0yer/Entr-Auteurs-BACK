@@ -20,6 +20,10 @@ const Writer = mongoose.model("Writer", {
     salt: String,
     last_connexion: Date,
   },
+  concours_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Author",
+  },
   stories_written: [
     {
       book_written: {

@@ -12,6 +12,10 @@ const Author = mongoose.model("Author", {
     story_url: String,
     story_cover: String,
   },
+  writer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Writer",
+  },
   token: String,
   hash: String,
   salt: String,

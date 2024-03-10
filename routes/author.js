@@ -4,7 +4,9 @@ const router = express.Router();
 const Author = require("../models/Author");
 const Session = require("../models/Session");
 const Book = require("../models/Book");
+const Writer = require("../models/Writer");
 const isAuthenticated = require("../middlewares/isAuthenticated");
+const writerIsAuthenticated = require("../middlewares/writerIsAuthenticated");
 const isAdmin = require("../middlewares/isAdmin");
 const newTirage = require("../functions/newTirage");
 
@@ -53,18 +55,13 @@ router.get("/authors/:status", async (req, res) => {
 });
 
 // 2. Créer un nouvel auteur (post)
-router.post("/author/signup", async (req, res) => {
+// // Mettre en body les infos sur l'histoire (title, url, cover)
+router.post("/author/signup", writerIsAuthenticated, async (req, res) => {
   try {
-    const {
-      password,
-      username,
-      email,
-      role,
-      status,
-      story_title,
-      story_url,
-      story_cover,
-    } = req.body;
+    const writerFound = req.writerFound;
+    const { email, token, hash, salt } = writerFound.connexion_details;
+    const { username, role, status } = writerFound.writer_details;
+    const { story_title, story_url, story_cover } = req.body;
     const emailAlreadyUsed = await Author.findOne({ email });
     if (emailAlreadyUsed !== null) {
       return res
@@ -85,8 +82,7 @@ router.post("/author/signup", async (req, res) => {
         message: "Le statut doit être `Pending` 🙀",
       });
     }
-    const salt = uid2(24);
-    const token = uid2(18);
+
     const newAuthor = new Author({
       email,
       account: {
@@ -99,12 +95,30 @@ router.post("/author/signup", async (req, res) => {
         story_url,
         story_cover,
       },
+      writer: writerFound._id,
       token,
       salt,
-      hash: SHA256(password + salt).toString(encBase64),
+      hash,
     });
     console.log(`Nouvel auteur ${req.body.username} créé 👏`);
     await newAuthor.save();
+    const writerToUpdate = await Writer.findByIdAndUpdate(
+      writerFound._id,
+      {
+        concours_id: newAuthor._id,
+      },
+      { new: true }
+    );
+    await writerToUpdate.save();
+    const book = await Book.findOneAndUpdate(
+      {
+        "story_details.story_url": story_url,
+      },
+      {
+        statusForConcours: "Pending",
+      }
+    );
+    await book.save();
     return res.status(200).json({
       _id: newAuthor._id,
       token: token,
@@ -214,18 +228,8 @@ router.post("/author/update", isAuthenticated, async (req, res) => {
           "Tu ne peux pas modifier ton histoire si ton inscription est en cours de validation ou que tu es inscrit à une session. Tu dois attendre que la session soit terminée. 🙀",
       });
     }
-    let story_title = authorFound.story_title;
-    let story_url = authorFound.story_url;
-    let story_cover = authorFound.story_cover;
-    let status = "Inactive";
-    if (req.body.story_title && req.body.story_url && req.body.story_cover) {
-      story_title = req.body.story_title;
-      story_url = req.body.story_url;
-      story_cover = req.body.story_cover;
-    }
-    if (req.body.status) {
-      status = "Pending";
-    }
+    const { story_title, story_url, story_cover } = req.body;
+    const status = "Pending";
     const storyToUpdate = await Author.findByIdAndUpdate(
       authorFound._id,
       {
@@ -235,6 +239,15 @@ router.post("/author/update", isAuthenticated, async (req, res) => {
       { new: true }
     );
     await storyToUpdate.save();
+    const book = await Book.findOneAndUpdate(
+      {
+        "story_details.story_url": story_url,
+      },
+      {
+        statusForConcours: "Pending",
+      }
+    );
+    await book.save();
     res.status(200).json({
       _id: authorFound._id,
       email: authorFound.email,
@@ -422,6 +435,15 @@ router.post("/admin/newSession/", isAdmin, async (req, res) => {
             { new: true }
           );
           await author.save();
+          const book = await Book.findOneAndUpdate(
+            {
+              "story_details.story_url": author.story_details.story_url,
+            },
+            {
+              statusForConcours: "Active",
+            }
+          );
+          await book.save();
         }
         filter.status = "Active";
         const activeAuthors = await Author.find(filter);

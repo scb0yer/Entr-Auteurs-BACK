@@ -318,11 +318,26 @@ router.post(
       let target_progress = writerFound.target_progress;
       let messages = writerFound.messages;
       if (req.body.password) {
-        connexion_details.salt = uid2(24);
-        connexion_details.token = uid2(18);
-        connexion_details.hash = SHA256(
+        const salt = uid2(24);
+        const token = uid2(18);
+        const hash = SHA256(
           req.body.password + connexion_details.salt
         ).toString(encBase64);
+        connexion_details.salt = salt;
+        connexion_details.token = token;
+        connexion_details.hash = hash;
+        if (writerFound.concours_id) {
+          const authorToUpdate = await Author.findByIdAndUpdate(
+            writerFound.concours_id,
+            {
+              token,
+              hash,
+              salt,
+            },
+            { new: true }
+          );
+          await authorToUpdate.save();
+        }
       }
       if (req.body.email) {
         connexion_details.email = req.body.email;

@@ -189,6 +189,7 @@ router.post("/admin/endSession", isAdmin, async (req, res) => {
       concours.push({ session_name: session.name, rank: results[r].rank });
       const bookUpdated = await Book.findByIdAndUpdate(book._id, {
         concours,
+        statusForConcours: "Inactive",
       });
       await bookUpdated.save();
     }

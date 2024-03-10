@@ -14,6 +14,7 @@ const Book = mongoose.model("Book", {
     story_mature: Boolean,
   },
   concours: [{ session_name: String, rank: Number }],
+  statusForConcours: String,
   story_reviews: [
     {
       story_review: {
