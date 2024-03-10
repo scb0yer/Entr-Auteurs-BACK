@@ -197,6 +197,7 @@ router.post("/writer/book/add", writerIsAuthenticated, async (req, res) => {
       isChecked: false,
       views: 0,
       dateOfCreation,
+      isRegistered: "No",
       note: 0,
     });
     console.log(
@@ -277,50 +278,45 @@ router.post("/writer/book/update", writerIsAuthenticated, async (req, res) => {
         story_details[element] = req.body[element];
       }
     }
+    if (req.body.isRegistered && writerFound.discord_checked === false) {
+      return res.status(400).json({
+        message:
+          "Tu ne peux inscrire une histoire que si ta présence sur le serveur Discord a été validée. Si tu es bien présent(e) sur le Discord, contacte un administrateur pour qu'il valide ton compte.",
+      });
+    }
     if (
       req.body.isRegistered &&
       bookWriter_id === writerFound_id &&
       writerFound.writer_details.status === "Active"
     ) {
-      if (writerFound.discord_checked === false) {
-        return res.status(400).json({
-          message:
-            "Tu ne peux inscrire une histoire que si ta présence sur le serveur Discord a été validée. Si tu es bien présent(e) sur le Discord, contacte un administrateur pour qu'il valide ton compte.",
-        });
-      } else {
-        const stories = await Writer.findById(writerFound._id).populate(
-          `stories_written.book_written`
-        );
-        let count = 0;
-        for (let s = 0; s < stories.length; s++) {
-          if (stories[s].isRegistered === "Yes") {
-            count++;
-          }
-        }
-        if (count > 0) {
-          return res.status(400).json({
-            message: "Tu ne peux inscrire qu'une seule histoire par session !",
-          });
-        } else {
-          isRegistered = req.body.isRegistered;
+      const stories = await Writer.findById(writerFound._id).populate(
+        `stories_written.book_written`
+      );
+      let count = 0;
+      for (let s = 0; s < stories.length; s++) {
+        if (stories[s].isRegistered === "Yes") {
+          count++;
         }
       }
-      const bookToUpdate = await Book.findByIdAndUpdate(
-        req.body.book_id,
-        {
-          story_details,
-          isRegistered,
-        },
-        { new: true }
-      );
-      await bookToUpdate.save();
-      return res.status(200).json(bookToUpdate);
-    } else {
-      return res.status(400).json({
-        message:
-          "Tu ne peux inscrire qu'une histoire que tu as écrite, et seulement si ton statut est actif.",
-      });
+      if (count > 0) {
+        return res.status(400).json({
+          message: "Tu ne peux inscrire qu'une seule histoire par session !",
+        });
+      } else {
+        isRegistered = req.body.isRegistered;
+      }
     }
+
+    const bookToUpdate = await Book.findByIdAndUpdate(
+      req.body.book_id,
+      {
+        story_details,
+        isRegistered,
+      },
+      { new: true }
+    );
+    await bookToUpdate.save();
+    return res.status(200).json(bookToUpdate);
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
