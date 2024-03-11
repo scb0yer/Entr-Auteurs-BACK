@@ -322,9 +322,7 @@ router.post(
       if (req.body.password) {
         const salt = uid2(24);
         const token = uid2(18);
-        const hash = SHA256(
-          req.body.password + connexion_details.salt
-        ).toString(encBase64);
+        const hash = SHA256(req.body.password + salt).toString(encBase64);
         connexion_details.salt = salt;
         connexion_details.token = token;
         connexion_details.hash = hash;
