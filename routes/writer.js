@@ -525,7 +525,7 @@ router.post(
           break;
         default:
       }
-      const day = today.getDay();
+      const day = today.getDate();
       let count = 0;
       if (progress.length === 0) {
         progress.push({
