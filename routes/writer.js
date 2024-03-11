@@ -169,6 +169,7 @@ router.post("/signup", fileUpload(), async (req, res) => {
       views: 0,
       discord_checked: false,
       banner,
+      isInExchange: false,
       public_progress: false,
       target_progress,
       nb_stories_read: 0,
@@ -289,6 +290,7 @@ router.get("/writer", writerIsAuthenticated, async (req, res) => {
       `stories_written.book_written`,
       `stories_assigned.book_assigned`,
       `stories_read.book_read`,
+      `concours_id`,
     ]);
     return res.status(200).json(writer);
   } catch (error) {
@@ -729,10 +731,10 @@ router.get("/admin/datas", writerIsAdmin, async (req, res) => {
       discordUnchecked: discordWriters,
     });
     const pendingWriters = await Writer.find({
-      "writer_details.username": "Pending",
+      "writer_details.status": "Pending",
     });
     const nbPendingWriters = await Writer.countDocuments({
-      "writer_details.username": "Pending",
+      "writer_details.status": "Pending",
     });
     results.push({
       countPendingWriters: nbPendingWriters,

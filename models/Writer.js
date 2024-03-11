@@ -24,6 +24,7 @@ const Writer = mongoose.model("Writer", {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Author",
   },
+  isInExchange: Boolean,
   stories_written: [
     {
       book_written: {

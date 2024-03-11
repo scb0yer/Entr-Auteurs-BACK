@@ -185,6 +185,7 @@ router.post("/admin/exchange/new", writerIsAdmin, async (req, res) => {
                 stories_read,
                 nb_stories_read,
                 stories_assigned,
+                isInExchange: true,
               }
             );
             await reviewerToUpdate.save();
@@ -223,10 +224,19 @@ router.post("/admin/exchange/complete", writerIsAdmin, async (req, res) => {
         .status(400)
         .json({ message: "il n'y a pas d'échange en cours" });
     }
+    for (let w = 0; w < exchange.draw.length; w++) {
+      const writer = await Writer.findByIdAndUpdate(
+        exchange.draw[w].writer._id,
+        { isInExchange: false },
+        { new: true }
+      );
+      await writer.save();
+    }
+
     const blackListedWriters = [];
     for (let d = 0; d < exchange.draw.length; d++) {
       const book = await Book.findByIdAndUpdate(
-        exchange.draw[d].book,
+        exchange.draw[d].book._id,
         {
           status: "Inactive",
         },
@@ -237,7 +247,7 @@ router.post("/admin/exchange/complete", writerIsAdmin, async (req, res) => {
         const writer_details = exchange.draw[d].reviewer.writer_details;
         writer_details.status = "Blacklisted";
         const reviewer = await Writer.findByIdAndUpdate(
-          exchange.draw[d].reviewer,
+          exchange.draw[d].reviewer._id,
           { writer_details },
           { new: true }
         );
