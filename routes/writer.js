@@ -548,8 +548,10 @@ router.post(
                 ) {
                   if (progress[y].year.months[m].days[d].day === day) {
                     if (req.params.action === "add") {
-                      progress[y].year.months[m].days[d].count +=
-                        req.body.count;
+                      const sum =
+                        parseInt(progress[y].year.months[m].days[d].count) +
+                        parseInt(req.body.count);
+                      progress[y].year.months[m].days[d].count = sum;
                       count++;
                       break;
                     } else if (req.params.action === "replace") {
