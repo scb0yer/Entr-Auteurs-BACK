@@ -559,14 +559,15 @@ router.post(
                       count++;
                       break;
                     }
-                  } else if (count === 0) {
-                    progress[y].year.months[m].days.push({
-                      day: day,
-                      count: req.body.count,
-                    });
-                    count++;
-                    break;
                   }
+                }
+                if (count === 0) {
+                  progress[y].year.months[m].days.push({
+                    day: day,
+                    count: req.body.count,
+                  });
+                  count++;
+                  break;
                 }
               } else if (count === 0) {
                 progress[y].year.months.push({
