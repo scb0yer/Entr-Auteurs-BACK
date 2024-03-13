@@ -78,17 +78,23 @@ router.get("/books", async (req, res) => {
     }
     const results = [];
     const books = await Book.find(filter)
-      .populate({
-        path: `writer`,
-        select: `writer_details`,
-      })
+      .populate([
+        {
+          path: `writer`,
+          select: `writer_details`,
+        },
+        `story_reviews.story_review`,
+      ])
       .sort(sorting)
       .limit(limit)
       .skip((page - 1) * limit);
-    const booksCount = await Book.find(filter).populate({
-      path: `writer`,
-      select: `writer_details`,
-    });
+    const booksCount = await Book.find(filter).populate([
+      {
+        path: `writer`,
+        select: `writer_details`,
+      },
+      `story_reviews.story_review`,
+    ]);
     let count = 0;
     for (let b = 0; b < books.length; b++) {
       if (books[b].writer.writer_details.status !== "BlackListed") {
