@@ -97,6 +97,7 @@ router.post("/writer/review/add", writerIsAuthenticated, async (req, res) => {
           {
             reviews_count,
             stories_assigned,
+            isInExchange: false,
           },
           { new: true }
         );
