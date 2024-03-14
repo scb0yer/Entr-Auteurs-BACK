@@ -180,4 +180,17 @@ router.post(
   }
 );
 
+router.get("/writer/review/:id", writerIsAdmin, async (req, res) => {
+  try {
+    const review = await Review.findById(req.params.id).populate([
+      `book`,
+      `reviewer`,
+      `writer`,
+    ]);
+    return res.status(200).json(review);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
