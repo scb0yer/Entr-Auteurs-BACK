@@ -235,6 +235,7 @@ router.post("/writer/login", async (req, res) => {
         _id: writer._id,
         email: writer.connexion_details.email,
         token: writer.connexion_details.token,
+        role: writer.writer_details.role,
         reviews_count: writer.reviews_count,
         views: writer.views,
         discord_checked: writer.discord_checked,
