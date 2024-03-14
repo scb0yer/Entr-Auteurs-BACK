@@ -6,6 +6,8 @@ const Writer = require("../models/Writer");
 const Review = require("../models/Review");
 const Exchange = require("../models/Exchange");
 
+const writerIsAdmin = require("../middlewares/writerIsAdmin");
+
 const writerIsAuthenticated = require("../middlewares/writerIsAuthenticated");
 
 // Routes pour les auteurs :
