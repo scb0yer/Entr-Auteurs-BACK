@@ -782,14 +782,14 @@ router.get("/admin/datas", writerIsAdmin, async (req, res) => {
 router.post("/admin/writer/:id", writerIsAdmin, async (req, res) => {
   try {
     const writer = await Writer.findById(req.params.id);
-    const writers_details = writer.writer_details;
+    const writer_details = { ...writer.writer_details };
     let discord_checked = writer.discord_checked;
     const warnings = [...writer.warnings];
     if (req.body.discord_checked) {
       discord_checked = req.body.discord_checked;
     }
     if (req.body.status) {
-      writers_details.status = req.body.status;
+      writer_details.status = req.body.status;
     }
     if (req.body.warning) {
       const newWarning = {
@@ -798,7 +798,7 @@ router.post("/admin/writer/:id", writerIsAdmin, async (req, res) => {
       };
       warnings.push(newWarning);
       if (warnings.length > 2) {
-        writers_details.status = "Blacklisted";
+        writer_details.status = "Blacklisted";
         for (let s = 0; s < writer.stories_written.length; s++) {
           const storyToUpdate = await Book.findByIdAndUpdate(
             `writer.stories_written[s].book_written`,
@@ -814,7 +814,7 @@ router.post("/admin/writer/:id", writerIsAdmin, async (req, res) => {
     const writerToUpdate = await Writer.findByIdAndUpdate(
       req.params.id,
       {
-        writers_details,
+        writer_details,
         discord_checked,
         warnings,
       },
