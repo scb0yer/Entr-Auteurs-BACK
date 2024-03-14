@@ -748,10 +748,7 @@ router.get("/admin/datas", writerIsAdmin, async (req, res) => {
     const contestations = await Contestation.find({
       $or: [{ status: "unread" }, { status: "pending" }],
     }).populate(`book`);
-    const nbContestations = await Contestation.countDocuments([
-      { status: "unread" },
-      { status: "pending" },
-    ]);
+    const nbContestations = contestations.length;
     results.push({ count: nbContestations, contestations: contestations });
     const authors = await Author.find({ status: "Pending" });
     const nbAuthors = await Author.countDocuments({ status: "Pending" });
