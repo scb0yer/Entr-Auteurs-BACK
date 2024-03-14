@@ -150,7 +150,7 @@ router.post("/signup", fileUpload(), async (req, res) => {
         username,
         role,
         status,
-        birthday,
+        birthdate: birthday,
         facebook,
         instagram,
         wattpad,
