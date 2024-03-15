@@ -768,6 +768,14 @@ router.get("/admin/datas", writerIsAdmin, async (req, res) => {
     results.push({ echange: exchange });
     const session = await Session.findOne({ status: "ongoing" });
     results.push({ concours: session });
+    const writersRegistered = await Book.find({ isRegistered: "Yes" })
+      .select("story_details")
+      .populate({ path: `writer`, select: "writer_details" });
+    console.log(writersRegistered);
+    results.push({
+      writersRegistered,
+      count: writersRegistered.length,
+    });
     return res.status(200).json(results);
   } catch (error) {
     res.status(500).json({ message: error.message });
