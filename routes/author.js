@@ -363,7 +363,7 @@ router.get("/admin/authors", isAdmin, async (req, res) => {
 });
 
 // 2. Modifier le statut d'un auteur (post) - uniquement pour admin
-// // status : Active / Inactive / Pending
+// // status : Active / Inactive / Pending / Dissmissed
 router.post("/admin/changeStatus/:id", isAdmin, async (req, res) => {
   try {
     const status = req.body.status;

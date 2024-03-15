@@ -78,7 +78,7 @@ const Writer = mongoose.model("Writer", {
   discord_checked: Boolean,
   banner: Object,
   messages: [{ sender: String, message: String }],
-  warnings: [{ admin: String, warning: String }],
+  warnings: [{ admin: String, warning: String, date: Date }],
 });
 
 module.exports = Writer;

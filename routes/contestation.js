@@ -73,7 +73,8 @@ router.get("/admin/contestations", writerIsAdmin, async (req, res) => {
 // -------- body : status (pending ou complete) et nullify (true) OU validate (true)
 router.post("/admin/contestation/:id", writerIsAdmin, async (req, res) => {
   try {
-    const contestation = await Contestation.findByIdAndUpdate(req.params.id);
+    const date = new Date();
+    const contestation = await Contestation.findById(req.params.id);
     if (contestation.status === "complete") {
       return res.status(400).json({
         message: "Cette contestation a déjà été résolue.",
@@ -119,8 +120,9 @@ router.post("/admin/contestation/:id", writerIsAdmin, async (req, res) => {
         admin: req.adminFound.writer_details.username,
         warning:
           "Tu as posté un avis inapproprié (pas objectif, injurieux ou sans bienveillance)",
+        date,
       });
-      const writers_details = reviewer.writer_details;
+      const writers_details = { ...reviewer.writer_details };
       if (warnings.length > 2) {
         writers_details.status = "Blacklisted";
         for (let s = 0; s < reviewer.stories_written.length; s++) {
@@ -149,7 +151,6 @@ router.post("/admin/contestation/:id", writerIsAdmin, async (req, res) => {
         { new: true }
       );
       await reviewToUpdate.save();
-
       const book = await Book.findById(reviewToUpdate.book).populate(
         `story_reviews.story_review`
       );
@@ -160,19 +161,19 @@ router.post("/admin/contestation/:id", writerIsAdmin, async (req, res) => {
         for (let r = 0; r < story_reviews.length; r++) {
           const review = await Review.findById(story_reviews[r]._id);
           note +=
-            review.review_details.orthographe.note1 +
-            review.review_details.style.note2 +
-            review.review_details.coherence.note3 +
-            review.review_details.suspens.note4 +
-            review.review_details.dialogues.note5;
+            parseInt(review.review_details.orthographe.note1) +
+            parseInt(review.review_details.style.note2) +
+            parseInt(review.review_details.coherence.note3) +
+            parseInt(review.review_details.suspens.note4) +
+            parseInt(review.review_details.dialogues.note5);
         }
       }
       note +=
-        reviewToUpdate.review_details.orthographe.note1 +
-        reviewToUpdate.review_details.style.note2 +
-        reviewToUpdate.review_details.coherence.note3 +
-        reviewToUpdate.review_details.suspens.note4 +
-        reviewToUpdate.review_details.dialogues.note5;
+        parseInt(reviewToUpdate.review_details.orthographe.note1) +
+        parseInt(reviewToUpdate.review_details.style.note2) +
+        parseInt(reviewToUpdate.review_details.coherence.note3) +
+        parseInt(reviewToUpdate.review_details.suspens.note4) +
+        parseInt(reviewToUpdate.review_details.dialogues.note5);
       story_reviews.push({ story_review: reviewToUpdate._id });
       note = note / 2 / story_reviews.length;
       const bookToUpdate = await Book.findByIdAndUpdate(
@@ -184,13 +185,13 @@ router.post("/admin/contestation/:id", writerIsAdmin, async (req, res) => {
         { new: true }
       );
       await bookToUpdate.save();
-
       const writer = await Writer.findById(reviewToUpdate.writer);
       const warnings = [...writer.warnings];
       warnings.push({
         admin: req.adminFound.writer_details.username,
         warning:
           "Tu as contesté un avis alors qu'il n'avait rien d'inapproprié (objectif, pas injurieux et bienveillant)",
+        date,
       });
       const writers_details = writer.writer_details;
       if (warnings.length > 2) {

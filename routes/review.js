@@ -151,19 +151,19 @@ router.post(
         for (let r = 0; r < story_reviews.length; r++) {
           const review = await Review.findById(story_reviews[r]._id);
           note +=
-            review.review_details.orthographe.note1 +
-            review.review_details.style.note2 +
-            review.review_details.coherence.note3 +
-            review.review_details.suspens.note4 +
-            review.review_details.dialogues.note5;
+            parseInt(review.review_details.orthographe.note1) +
+            parseInt(review.review_details.style.note2) +
+            parseInt(review.review_details.coherence.note3) +
+            parseInt(review.review_details.suspens.note4) +
+            parseInt(review.review_details.dialogues.note5);
         }
       }
       note +=
-        reviewToUpdate.review_details.orthographe.note1 +
-        reviewToUpdate.review_details.style.note2 +
-        reviewToUpdate.review_details.coherence.note3 +
-        reviewToUpdate.review_details.suspens.note4 +
-        reviewToUpdate.review_details.dialogues.note5;
+        parseInt(reviewToUpdate.review_details.orthographe.note1) +
+        parseInt(reviewToUpdate.review_details.style.note2) +
+        parseInt(reviewToUpdate.review_details.coherence.note3) +
+        parseInt(reviewToUpdate.review_details.suspens.note4) +
+        parseInt(reviewToUpdate.review_details.dialogues.note5);
       story_reviews.push({ story_review: reviewToUpdate._id });
       note = note / 2 / story_reviews.length;
       const bookToUpdate = await Book.findByIdAndUpdate(

@@ -778,6 +778,7 @@ router.get("/admin/datas", writerIsAdmin, async (req, res) => {
 // --- discord_checked // warning // status -> "Active"
 router.post("/admin/writer/:id", writerIsAdmin, async (req, res) => {
   try {
+    const date = new Date();
     const writer = await Writer.findById(req.params.id);
     const writer_details = { ...writer.writer_details };
     let discord_checked = writer.discord_checked;
@@ -792,6 +793,7 @@ router.post("/admin/writer/:id", writerIsAdmin, async (req, res) => {
       const newWarning = {
         admin: req.adminFound.writer_details.username,
         warning: req.body.warning,
+        date,
       };
       warnings.push(newWarning);
       if (warnings.length > 2) {
