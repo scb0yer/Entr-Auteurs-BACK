@@ -762,7 +762,8 @@ router.get("/admin/datas", writerIsAdmin, async (req, res) => {
       authorsRegistered: authorsRegistered,
     });
     const exchange = await Exchange.find({ status: "ongoing" }).populate([
-      `draw.reviewer`,
+      { path: `draw.reviewer`, select: `writer_details` },
+      { path: `draw.review`, select: `status` },
       `draw.book`,
     ]);
     results.push({ echange: exchange });
