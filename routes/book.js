@@ -68,6 +68,7 @@ router.get("/books", async (req, res) => {
       if (req.query.sort === "last_added") {
         sorting.dateOfCreation = -1;
       } else if (req.query.sort === "note") {
+        sorting.dateOfCreation = -1;
         sorting.note = -1;
       }
     } else {
