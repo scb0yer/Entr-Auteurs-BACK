@@ -206,7 +206,8 @@ router.get("/writer/:id", async (req, res) => {
       const progress = await Writer.findById(req.params.id).select(
         "target_progress progress"
       );
-      writer.progress = progress;
+      writer.progress = progress.progress;
+      writer.target_progress = progress.target_progress;
     }
     const writerToUpdate = await Writer.findByIdAndUpdate(req.params.id, {
       views,
