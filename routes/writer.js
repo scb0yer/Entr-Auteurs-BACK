@@ -742,7 +742,10 @@ router.get("/admin/datas", writerIsAdmin, async (req, res) => {
       countPendingWriters: nbPendingWriters,
       pendingWriters: pendingWriters,
     });
-    const books = await Book.find({ isChecked: false });
+    const books = await Book.find({ isChecked: false }).populate({
+      path: `writer`,
+      select: `writer_details`,
+    });
     const nbBooks = await Book.countDocuments({ isChecked: false });
     results.push({ count: nbBooks, books: books });
     const contestations = await Contestation.find({
