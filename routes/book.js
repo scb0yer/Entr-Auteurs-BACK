@@ -28,7 +28,7 @@ const writerIsAdmin = require("../middlewares/writerIsAdmin");
 // et facultatif more (Number>1), page (Number>1).
 router.get("/books", async (req, res) => {
   try {
-    const filter = {};
+    const filter = { isChecked: true };
     const sorting = {};
     let page = 1;
     if (req.query.page) {
