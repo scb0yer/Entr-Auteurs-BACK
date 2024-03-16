@@ -656,6 +656,7 @@ router.post(
         });
       }
       const sender = req.writerFound.writer_details.username;
+      const sender_id = req.writerFound._id;
       console.log(req.writerFound._id);
       if (
         JSON.stringify(req.writerFound._id).slice(1, 25) ===
@@ -667,7 +668,7 @@ router.post(
       }
       const writer = await Writer.findById(req.params.writer_id);
       const messages = [...writer.messages];
-      messages.push({ sender, message });
+      messages.push({ sender, message, sender_id });
       const writerToUpdate = await Writer.findByIdAndUpdate(
         writer._id,
         {

@@ -77,7 +77,7 @@ const Writer = mongoose.model("Writer", {
   views: Number,
   discord_checked: Boolean,
   banner: Object,
-  messages: [{ sender: String, message: String }],
+  messages: [{ sender: String, message: String, sender_id: Object }],
   warnings: [{ admin: String, warning: String, date: Date }],
 });
 
