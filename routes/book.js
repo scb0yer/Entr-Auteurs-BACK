@@ -50,8 +50,8 @@ router.get("/books", async (req, res) => {
       if (req.query.mature) {
         filter.story_details.story_mature = req.query.mature;
       }
-      if (req.query.title) {
-        filter.story_details.story_title = req.query.title;
+      if (req.query.id) {
+        filter._id = req.query.id;
       }
       if (req.query.status) {
         filter.status = req.query.status;
