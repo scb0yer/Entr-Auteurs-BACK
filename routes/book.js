@@ -46,11 +46,12 @@ router.get("/books", async (req, res) => {
         filter.concours.session_name = session_name;
       }
       if (req.query.category) {
-        filter.story_details.story_cat = req.query.category;
+        filter["story_details.story_cat"] = req.query.category;
       }
       if (req.query.mature === "no") {
-        filter.story_details.story_mature = false;
+        filter["story_details.story_mature"] = false;
       }
+
       if (req.query.id) {
         filter._id = req.query.id;
       }
