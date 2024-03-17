@@ -83,7 +83,7 @@ router.get("/books", async (req, res) => {
       .populate([
         {
           path: `writer`,
-          select: `writer_details`,
+          select: `writer_details stories_written`,
         },
         `story_reviews.story_review`,
       ])
