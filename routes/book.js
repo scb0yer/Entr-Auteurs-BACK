@@ -96,6 +96,9 @@ router.get("/books", async (req, res) => {
       },
       `story_reviews.story_review`,
     ]);
+    const booksList = await Book.find({ isChecked: true }).select(
+      `story_details.story_title`
+    );
     let count = 0;
     for (let b = 0; b < books.length; b++) {
       if (books[b].writer.writer_details.status !== "BlackListed") {
@@ -107,7 +110,7 @@ router.get("/books", async (req, res) => {
         count++;
       }
     }
-    return res.status(200).json({ count, results });
+    return res.status(200).json({ count, results, booksList });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
