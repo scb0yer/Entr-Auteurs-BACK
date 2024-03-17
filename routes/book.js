@@ -47,7 +47,7 @@ router.get("/books", async (req, res) => {
       if (req.query.category) {
         filter.story_details.story_cat = req.query.category;
       }
-      if ((req.query.mature = "no")) {
+      if (req.query.mature === "no") {
         filter.story_details.story_mature = false;
       }
       if (req.query.id) {
