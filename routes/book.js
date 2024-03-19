@@ -51,7 +51,6 @@ router.get("/books", async (req, res) => {
       if (req.query.mature === "no") {
         filter["story_details.story_mature"] = false;
       }
-
       if (req.query.id) {
         filter._id = req.query.id;
       }

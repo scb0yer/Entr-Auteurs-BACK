@@ -358,7 +358,7 @@ router.post(
           const pictureToUpload = req.files.picture;
           const result = await cloudinary.uploader.upload(
             convertToBase64(pictureToUpload),
-            { folder: `/entrauteurs` }
+            { folder: `/entrauteurs/banners` }
           );
           banner = result.secure_url;
         }
