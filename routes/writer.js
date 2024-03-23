@@ -275,24 +275,6 @@ router.post("/writer/login", async (req, res) => {
         "writer_details.birthdate",
         "writer_details.username",
       ]);
-      const birthdays = [];
-      for (let w = 0; w < writers.length; w++) {
-        console.log(
-          writers[w].writer_details.username,
-          writers[w].writer_details.birthdate.getDate(),
-          writers[w].writer_details.birthdate.getMonth()
-        );
-        if (
-          writers[w].writer_details.birthdate.getDate() === day &&
-          writers[w].writer_details.birthdate.getMonth() === month
-        ) {
-          birthdays.push(writers[w]);
-        }
-      }
-      res.status(200).json({
-        writer: response,
-        birthdays,
-      });
     } else {
       return res.status(401).json({ message: "Mot de passe incorrect 😾" });
     }
@@ -318,7 +300,24 @@ router.get("/writer", writerIsAuthenticated, async (req, res) => {
       `stories_read.book_read`,
       `concours_id`,
     ]);
-    return res.status(200).json(writer);
+    const birthdays = [];
+    for (let w = 0; w < writers.length; w++) {
+      console.log(
+        writers[w].writer_details.username,
+        writers[w].writer_details.birthdate.getDate(),
+        writers[w].writer_details.birthdate.getMonth()
+      );
+      if (
+        writers[w].writer_details.birthdate.getDate() === day &&
+        writers[w].writer_details.birthdate.getMonth() === month
+      ) {
+        birthdays.push(writers[w]);
+      }
+    }
+    res.status(200).json({
+      writer: response,
+    });
+    return res.status(200).json({ writer, birthdays });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
