@@ -861,7 +861,7 @@ router.post("/admin/sendMessage", writerIsAdmin, async (req, res) => {
     const sender = req.adminFound.writer_details.username;
     const sender_id = req.adminFound._id;
     const message = req.body.message;
-    const writers = await Writer.find({ status: "Active" });
+    const writers = await Writer.find({ "writer_details.status": "Active" });
     for (let w = 0; w < writers.length; w++) {
       const messages = [...writers[w].messages];
       messages.push({ sender, message, sender_id });
