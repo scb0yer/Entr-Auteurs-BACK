@@ -302,11 +302,6 @@ router.get("/writer", writerIsAuthenticated, async (req, res) => {
     ]);
     const birthdays = [];
     for (let w = 0; w < writers.length; w++) {
-      console.log(
-        writers[w].writer_details.username,
-        writers[w].writer_details.birthdate.getDate(),
-        writers[w].writer_details.birthdate.getMonth()
-      );
       if (
         writers[w].writer_details.birthdate.getDate() === day &&
         writers[w].writer_details.birthdate.getMonth() === month
@@ -314,9 +309,6 @@ router.get("/writer", writerIsAuthenticated, async (req, res) => {
         birthdays.push(writers[w]);
       }
     }
-    res.status(200).json({
-      writer: response,
-    });
     return res.status(200).json({ writer, birthdays });
   } catch (error) {
     return res.status(500).json({ error: error.message });
