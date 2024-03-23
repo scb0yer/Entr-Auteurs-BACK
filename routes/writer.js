@@ -267,6 +267,7 @@ router.post("/writer/login", async (req, res) => {
         { new: true }
       );
       await updatedWriter.save();
+      return res.status(200).json(response);
     } else {
       return res.status(401).json({ message: "Mot de passe incorrect 😾" });
     }
