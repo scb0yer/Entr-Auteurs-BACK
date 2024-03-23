@@ -43,6 +43,7 @@ const convertToBase64 = (file) => {
 // Pour les admins :
 // // 1. Afficher tous les membres
 // // 2. Changer le statut d'un membre (valider, blacklister...), discord.
+// // 3. Envoyer un message à tous les auteurs.
 
 // --------------------------- Routes pour les Visiteurs ---------------------------
 
@@ -266,8 +267,31 @@ router.post("/writer/login", async (req, res) => {
         { new: true }
       );
       await updatedWriter.save();
+      const today = new Date();
+      console.log(today);
+      const day = today.getDate();
+      const month = today.getMonth();
+      const writers = await Writer.find().select([
+        "writer_details.birthdate",
+        "writer_details.username",
+      ]);
+      const birthdays = [];
+      for (let w = 0; w < writers.length; w++) {
+        console.log(
+          writers[w].writer_details.username,
+          writers[w].writer_details.birthdate.getDate(),
+          writers[w].writer_details.birthdate.getMonth()
+        );
+        if (
+          writers[w].writer_details.birthdate.getDate() === day &&
+          writers[w].writer_details.birthdate.getMonth() === month
+        ) {
+          birthdays.push(writers[w]);
+        }
+      }
       res.status(200).json({
         writer: response,
+        birthdays,
       });
     } else {
       return res.status(401).json({ message: "Mot de passe incorrect 😾" });
@@ -836,6 +860,32 @@ router.post("/admin/writer/:id", writerIsAdmin, async (req, res) => {
     );
     await writerToUpdate.save();
     return res.status(200).json(writerToUpdate);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/admin/sendMessage", writerIsAdmin, async (req, res) => {
+  try {
+    const sender = req.adminFound.writer_details.username;
+    const sender_id = req.adminFound._id;
+    const message = req.body.message;
+    const writers = await Writer.find({ status: "Active" });
+    for (let w = 0; w < writers.length; w++) {
+      const messages = [...writers[w].messages];
+      messages.push({ sender, message, sender_id });
+      const writerToUpdate = await Writer.findByIdAndUpdate(
+        writers[w]._id,
+        {
+          messages,
+        },
+        { new: true }
+      );
+      await writerToUpdate.save();
+    }
+    return res
+      .status(200)
+      .json("le message a bien été envoyé à tous les auteurs actifs 🏹");
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
