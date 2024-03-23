@@ -267,14 +267,6 @@ router.post("/writer/login", async (req, res) => {
         { new: true }
       );
       await updatedWriter.save();
-      const today = new Date();
-      console.log(today);
-      const day = today.getDate();
-      const month = today.getMonth();
-      const writers = await Writer.find().select([
-        "writer_details.birthdate",
-        "writer_details.username",
-      ]);
     } else {
       return res.status(401).json({ message: "Mot de passe incorrect 😾" });
     }
@@ -299,6 +291,13 @@ router.get("/writer", writerIsAuthenticated, async (req, res) => {
       `stories_assigned.book_assigned`,
       `stories_read.book_read`,
       `concours_id`,
+    ]);
+    const today = new Date();
+    const day = today.getDate();
+    const month = today.getMonth();
+    const writers = await Writer.find().select([
+      "writer_details.birthdate",
+      "writer_details.username",
     ]);
     const birthdays = [];
     for (let w = 0; w < writers.length; w++) {
