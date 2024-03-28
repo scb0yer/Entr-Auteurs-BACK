@@ -91,7 +91,7 @@ router.post("/admin/exchange/new", writerIsAdmin, async (req, res) => {
         "story_details.story_cat": categories[c],
       }).populate({ path: "writer" });
 
-      if (storiesNotMature.length + storiesMature.length < 5) {
+      if (storiesNotMature.length + storiesMature.length < 2) {
         result[
           categories[c]
         ] = `Pas assez de participants pour lancer un tirage`;
