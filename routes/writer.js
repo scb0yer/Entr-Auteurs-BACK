@@ -7,6 +7,7 @@ const Contestation = require("../models/Contestation");
 const Exchange = require("../models/Exchange");
 const Author = require("../models/Author");
 const Session = require("../models/Session");
+const Review = require("../models/Review");
 
 const writerIsAuthenticated = require("../middlewares/writerIsAuthenticated");
 const writerIsAdmin = require("../middlewares/writerIsAdmin");
@@ -294,6 +295,7 @@ router.get("/writer", writerIsAuthenticated, async (req, res) => {
       `stories_read.book_read`,
       `concours_id`,
     ]);
+    const reviews = await Review.find({ writer: writerFound });
     const today = new Date();
     const day = today.getDate();
     const month = today.getMonth();
@@ -310,7 +312,7 @@ router.get("/writer", writerIsAuthenticated, async (req, res) => {
         birthdays.push(writers[w]);
       }
     }
-    return res.status(200).json({ writer, birthdays });
+    return res.status(200).json({ writer, birthdays, reviews });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
