@@ -161,18 +161,18 @@ router.post("/admin/exchange/new", writerIsAdmin, async (req, res) => {
           }
         }
         if (exchanges !== "error") {
-          for (d = 0; d < draw.length; d++) {
-            const book = await Book.findById(draw[d].book);
+          for (d = 0; d < exchanges.length; d++) {
+            const book = await Book.findById(exchanges[d].book);
             const readers = [...book.readers];
-            readers.push(draw[d].reviewer);
-            const writer = await Book.findByIdAndUpdate(draw[d].book, {
+            readers.push(exchanges[d].reviewer);
+            const writer = await Book.findByIdAndUpdate(exchanges[d].book, {
               isRegistered: "No",
               status: "Active",
               readers,
             });
-            const reviewer = await Writer.findById(draw[d].reviewer);
+            const reviewer = await Writer.findById(exchanges[d].reviewer);
             const stories_read = [...reviewer.stories_read];
-            stories_read.push({ book_read: draw[d].book });
+            stories_read.push({ book_read: exchanges[d].book });
             const nb_stories_read = reviewer.nb_stories_read + 1;
             const stories_assigned = [...reviewer.stories_assigned];
             stories_assigned.push({
@@ -180,7 +180,7 @@ router.post("/admin/exchange/new", writerIsAdmin, async (req, res) => {
               book_assigned: draw[d].book,
             });
             const reviewerToUpdate = await Writer.findByIdAndUpdate(
-              draw[d].reviewer,
+              exchanges[d].reviewer,
               {
                 stories_read,
                 nb_stories_read,
@@ -189,7 +189,7 @@ router.post("/admin/exchange/new", writerIsAdmin, async (req, res) => {
               }
             );
             await reviewerToUpdate.save();
-            draw[d].writer = writer.writer;
+            exchanges[d].writer = writer.writer;
           }
           result[categories[c]] = [{ exchanges, writersToUnregister }];
         }

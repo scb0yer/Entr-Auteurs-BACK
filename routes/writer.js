@@ -290,6 +290,7 @@ router.get("/writer", writerIsAuthenticated, async (req, res) => {
     const writer = await Writer.findById(writerFound._id).populate([
       `stories_written.book_written`,
       `stories_assigned.book_assigned`,
+      `stories_assigned.review`,
       `stories_read.book_read`,
       `concours_id`,
     ]);
