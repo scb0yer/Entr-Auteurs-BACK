@@ -589,29 +589,31 @@ router.post(
                   count++;
                   break;
                 }
-              } else if (count === 0) {
-                progress[y].year.months.push({
-                  month: month,
-                  days: [{ day: day, count: req.body.count }],
-                });
-                count++;
-                break;
               }
             }
-          } else if (count === 0) {
-            progress.push({
-              year: {
-                index: year,
-                months: [
-                  { month: month, days: [{ day: day, count: req.body.count }] },
-                ],
-              },
-            });
-            count++;
-            break;
+            if (count === 0) {
+              progress[y].year.months.push({
+                month: month,
+                days: [{ day: day, count: req.body.count }],
+              });
+              count++;
+              break;
+            }
           }
         }
+        if (count === 0) {
+          progress.push({
+            year: {
+              index: year,
+              months: [
+                { month: month, days: [{ day: day, count: req.body.count }] },
+              ],
+            },
+          });
+          count++;
+        }
       }
+
       const writerToUpdate = await Writer.findByIdAndUpdate(
         writerFound._id,
         {
