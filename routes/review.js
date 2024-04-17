@@ -166,11 +166,14 @@ router.post(
         parseInt(reviewToUpdate.review_details.dialogues.note5);
       story_reviews.push({ story_review: reviewToUpdate._id });
       note = note / 2 / story_reviews.length;
+      let nbReviews = book.nbReviews;
+      nbReviews++;
       const bookToUpdate = await Book.findByIdAndUpdate(
         book._id,
         {
           note,
           story_reviews,
+          nbReviews,
         },
         { new: true }
       );

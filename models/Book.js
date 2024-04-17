@@ -24,6 +24,7 @@ const Book = mongoose.model("Book", {
     },
   ],
   note: Number,
+  nbReviews: Number,
   views: Number,
   readers: [
     {
