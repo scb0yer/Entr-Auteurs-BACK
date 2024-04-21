@@ -8,6 +8,7 @@ const isAdmin = require("../middlewares/isAdmin");
 
 // Routes pour les visiteurs :
 // // 1. Récupérer les résultats d'une session (get)
+// // 2. Récupérer les résultats de toutes les sessions complètes (get)
 // Routes pour les admins :
 // // 1. Récupérer les infos des sessions (get)
 // // 2. Lancer une nouvelle semaine (post)
@@ -28,6 +29,16 @@ router.get("/session/:index", async (req, res) => {
     } else {
       return res.status(200).json(session);
     }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 2. Récupérer les résultats de toutes les sessions complètes (get)
+router.get("/sessions", async (req, res) => {
+  try {
+    const sessions = await Session.find({ status: "complete" });
+    return res.status(200).json(sessions);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
