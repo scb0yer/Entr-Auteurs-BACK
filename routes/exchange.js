@@ -236,7 +236,7 @@ router.post("/admin/exchange/complete", writerIsAdmin, async (req, res) => {
     const blackListedWriters = [];
     for (let d = 0; d < exchange.draw.length; d++) {
       const book = await Book.findByIdAndUpdate(
-        exchange.draw[d].book._id,
+        exchange.draw[d].book,
         {
           status: "Inactive",
         },
@@ -247,7 +247,7 @@ router.post("/admin/exchange/complete", writerIsAdmin, async (req, res) => {
         const writer_details = exchange.draw[d].reviewer.writer_details;
         writer_details.status = "Blacklisted";
         const reviewer = await Writer.findByIdAndUpdate(
-          exchange.draw[d].reviewer._id,
+          exchange.draw[d].reviewer,
           { writer_details },
           { new: true }
         );
@@ -255,7 +255,7 @@ router.post("/admin/exchange/complete", writerIsAdmin, async (req, res) => {
         blackListedWriters.push(reviewer.writer_details.username);
         for (let s = 0; s < reviewer.stories_written.length; s++) {
           const storyToUpdate = await Book.findByIdAndUpdate(
-            `reviewer.stories_written[s].book_written`,
+            reviewer.stories_written[s].book_written,
             {
               status: "Offline",
             },
