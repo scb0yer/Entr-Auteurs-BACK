@@ -414,7 +414,7 @@ router.post("/admin/newSession/", isAdmin, async (req, res) => {
 
     const authorsId = [];
     for (let i = 0; i < authors.length; i++) {
-      const participant = json.stringify(authors[i]._id).slice(1, 25);
+      const participant = JSON.stringify(authors[i]._id).slice(1, 25);
       authorsId.push(participant);
     }
     // à travers une boucle infinie, appeler newTirage jusqu'à avoir un résultat

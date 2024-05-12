@@ -33,7 +33,7 @@ router.post("/admin/exchange/new", writerIsAdmin, async (req, res) => {
     const result = {};
     const today = new Date();
     const year = today.getFullYear();
-    const monthValue = today.getUTCMonth() + 2;
+    const monthValue = today.getUTCMonth() + 1;
     let month = "";
     switch (monthValue) {
       case 1:
@@ -144,7 +144,7 @@ router.post("/admin/exchange/new", writerIsAdmin, async (req, res) => {
           console.log("Pas d'auteurs à supprimer");
         }
         let exchanges = [];
-        for (i = 0; i < 51; i++) {
+        for (let i = 0; i < 51; i++) {
           console.log(`essai n°${i}`);
           exchanges = newDraw(storiesNotMature, storiesMature);
           console.log(exchanges);
@@ -161,7 +161,7 @@ router.post("/admin/exchange/new", writerIsAdmin, async (req, res) => {
           }
         }
         if (exchanges !== "error") {
-          for (d = 0; d < exchanges.length; d++) {
+          for (let d = 0; d < exchanges.length; d++) {
             const book = await Book.findById(exchanges[d].book);
             const readers = [...book.readers];
             readers.push(exchanges[d].reviewer);
@@ -177,7 +177,7 @@ router.post("/admin/exchange/new", writerIsAdmin, async (req, res) => {
             const stories_assigned = [...reviewer.stories_assigned];
             stories_assigned.push({
               session: name,
-              book_assigned: draw[d].book,
+              book_assigned: exchanges[d].book,
             });
             const reviewerToUpdate = await Writer.findByIdAndUpdate(
               exchanges[d].reviewer,
