@@ -127,10 +127,7 @@ router.post(
           .json({ message: "L'avis a déjà été validé ou contesté." });
       }
       const status = "approuved";
-      let share = false;
-      if (req.body.share === true) {
-        share = true;
-      }
+      let share = true;
       const reviewToUpdate = await Review.findByIdAndUpdate(
         review_id,
         {
@@ -166,7 +163,10 @@ router.post(
         parseInt(reviewToUpdate.review_details.dialogues.note5);
       story_reviews.push({ story_review: reviewToUpdate._id });
       note = note / 2 / story_reviews.length;
-      let nbReviews = book.nbReviews;
+      let nbReviews = 0;
+      if (book.nbReviews) {
+        nbReviews = book.nbReviews;
+      }
       nbReviews++;
       const bookToUpdate = await Book.findByIdAndUpdate(
         book._id,
