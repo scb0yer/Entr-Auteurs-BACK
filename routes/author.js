@@ -221,11 +221,12 @@ router.post("/author/update", isAuthenticated, async (req, res) => {
       });
     }
     const { story_title, story_url, story_cover } = req.body;
+    const story_details = { story_title, story_url, story_cover };
     const status = "Pending";
     const storyToUpdate = await Author.findByIdAndUpdate(
       authorFound._id,
       {
-        story_details: { story_title, story_url, story_cover },
+        story_details,
         status: status,
       },
       { new: true }
