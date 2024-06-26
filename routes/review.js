@@ -121,7 +121,7 @@ router.post(
     try {
       const review_id = req.body.review_id;
       const review = await Review.findById(review_id);
-      if (review.status !== "sent") {
+      if (review.status === "cancel") {
         return res
           .status(400)
           .json({ message: "L'avis a déjà été validé ou contesté." });
@@ -138,15 +138,16 @@ router.post(
       );
       await reviewToUpdate.save();
 
-      const book = await Book.findById(reviewToUpdate.book).populate(
-        `story_reviews.story_review`
-      );
+      const book = await Book.findById(reviewToUpdate.book);
+
       let story_reviews = [];
       let note = 0;
+
       if (book.story_reviews.length > 0) {
         story_reviews = [...book.story_reviews];
         for (let r = 0; r < story_reviews.length; r++) {
-          const review = await Review.findById(story_reviews[r]._id);
+          const review = await Review.findById(story_reviews[r].story_review);
+          console.log(review);
           note +=
             parseInt(review.review_details.orthographe.note1) +
             parseInt(review.review_details.style.note2) +
