@@ -70,7 +70,7 @@ router.get("/books", async (req, res) => {
         sorting.dateOfCreation = -1;
       } else if (req.query.sort === "note") {
         sorting.note = -1;
-        sorting.nbReviews = 1;
+        sorting.nbReviews = -1;
       }
     } else {
       return res.status(400).json({
