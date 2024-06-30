@@ -81,7 +81,6 @@ router.get("/writers/:sort", async (req, res) => {
 router.post("/signup", fileUpload(), async (req, res) => {
   try {
     const {
-      username,
       day,
       month,
       year,
@@ -94,6 +93,10 @@ router.post("/signup", fileUpload(), async (req, res) => {
       description,
       target_progress,
     } = req.body;
+    let username = req.body.username;
+    if (username.includes("@")) {
+      username = username.slice(1);
+    }
     let mature = req.body.mature;
     let banner = "";
     if (req.files) {
