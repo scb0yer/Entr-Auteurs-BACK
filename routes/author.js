@@ -361,6 +361,7 @@ router.get("/admin/authors", isAdmin, async (req, res) => {
         story_cover: authors[a].story_details.story_cover,
         story_url: authors[a].story_details.story_url,
         email: authors[a].email,
+        status: authors[a].status,
         writerData: authorData,
         stories_voted: authors[a].stories_voted,
       };
