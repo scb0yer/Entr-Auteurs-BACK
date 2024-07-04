@@ -362,6 +362,7 @@ router.get("/admin/authors", isAdmin, async (req, res) => {
         story_url: authors[a].story_details.story_url,
         email: authors[a].email,
         status: authors[a].status,
+        _id: authors[a]._id,
         writerData: authorData,
         stories_voted: authors[a].stories_voted,
       };
@@ -388,6 +389,8 @@ router.get("/admin/authors", isAdmin, async (req, res) => {
 router.post("/admin/changeStatus/:id", isAdmin, async (req, res) => {
   try {
     const status = req.body.status;
+    console.log("id", req.params.id);
+    const writer = await Author.findById(req.params.id);
     const author = await Author.findByIdAndUpdate(
       req.params.id,
       {
@@ -395,7 +398,6 @@ router.post("/admin/changeStatus/:id", isAdmin, async (req, res) => {
       },
       { new: true }
     );
-    await author.save();
     const book = await Book.findOneAndUpdate(
       {
         "story_details.story_url": author.story_details.story_url,
@@ -404,7 +406,6 @@ router.post("/admin/changeStatus/:id", isAdmin, async (req, res) => {
         statusForConcours: status,
       }
     );
-    await book.save();
     res
       .status(200)
       .json(
