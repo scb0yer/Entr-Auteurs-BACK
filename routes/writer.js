@@ -813,7 +813,7 @@ router.get("/admin/datas", writerIsAdmin, async (req, res) => {
 });
 
 // 2. Modifier les information d'un auteur (post)
-// --- discord_checked // warning // status -> "Active"
+// --- discord_checked // warning // status -> "Active" // noDiscord
 router.post("/admin/writer/:id", writerIsAdmin, async (req, res) => {
   try {
     const date = new Date();
@@ -823,6 +823,9 @@ router.post("/admin/writer/:id", writerIsAdmin, async (req, res) => {
     const warnings = [...writer.warnings];
     if (req.body.discord_checked) {
       discord_checked = req.body.discord_checked;
+    }
+    if (req.body.noDiscord) {
+      writer_details.discord = "";
     }
     if (req.body.status) {
       writer_details.status = req.body.status;
