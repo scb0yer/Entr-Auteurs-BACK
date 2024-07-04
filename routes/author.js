@@ -349,6 +349,23 @@ router.delete("/author/delete", isAuthenticated, async (req, res) => {
 router.get("/admin/authors", isAdmin, async (req, res) => {
   try {
     const authors = await Author.find();
+    const authorsData = [];
+    for (let a = 0; a < authors.length; a++) {
+      const authorData = await Writer.findOne({
+        "connexion_details.email": authors[a].email,
+      });
+      console.log("data", authorData);
+      const data = {
+        username: authors[a].account.username,
+        story_title: authors[a].story_details.story_details,
+        story_cover: authors[a].story_details.story_cover,
+        story_url: authors[a].story_details.story_url,
+        email: authors[a].email,
+        writerData: authorData,
+        stories_voted: authors[a].stories_voted,
+      };
+      authorsData.push(data);
+    }
     const count = await Author.countDocuments();
     const nbRegistered = await Author.countDocuments({ status: "Registered" });
     const nbActive = await Author.countDocuments({ status: "Active" });
@@ -356,7 +373,7 @@ router.get("/admin/authors", isAdmin, async (req, res) => {
       count: count,
       nbRegistered: nbRegistered,
       nbActive: nbActive,
-      authors: authors,
+      authors: authorsData,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
