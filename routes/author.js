@@ -368,11 +368,13 @@ router.get("/admin/authors", isAdmin, async (req, res) => {
     }
     const count = await Author.countDocuments();
     const nbRegistered = await Author.countDocuments({ status: "Registered" });
+    const nbPending = await Author.countDocuments({ status: "Pending" });
     const nbActive = await Author.countDocuments({ status: "Active" });
     return res.status(200).json({
       count: count,
       nbRegistered: nbRegistered,
       nbActive: nbActive,
+      nbPending: nbPending,
       authors: authorsData,
     });
   } catch (error) {
