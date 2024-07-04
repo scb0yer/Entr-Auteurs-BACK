@@ -357,7 +357,7 @@ router.get("/admin/authors", isAdmin, async (req, res) => {
       console.log("data", authorData);
       const data = {
         username: authors[a].account.username,
-        story_title: authors[a].story_details.story_details,
+        story_title: authors[a].story_details.story_title,
         story_cover: authors[a].story_details.story_cover,
         story_url: authors[a].story_details.story_url,
         email: authors[a].email,
